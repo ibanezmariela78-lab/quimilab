@@ -1,98 +1,261 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { ThemedText } from "@/components/themed-text";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+  const colors = isDark
+    ? {
+        background: "#10242A",
+        surface: "#18363D",
+        surfacePressed: "#21454D",
+        text: "#F1FAF8",
+        muted: "#B7D1CD",
+        accent: "#5DD3B6",
+        accentSoft: "#214D4A",
+        border: "#2C5559",
+      }
+    : {
+        background: "#F4F8F7",
+        surface: "#FFFFFF",
+        surfacePressed: "#E8F3F0",
+        text: "#17343A",
+        muted: "#5A7375",
+        accent: "#087F73",
+        accentSoft: "#DDF2EC",
+        border: "#D6E5E0",
+      };
+
+  const actions = [
+    {
+      title: "PREPARACIÓN DE LABORATORIO",
+      description:
+        "Soluciones, mezclas, sólidos, líquidos y preparaciones guiadas paso a paso.",
+      icon: "flask-outline" as const,
+      route: "/modal" as const,
+    },
+    {
+      title: "CALCULADORA QUÍMICA",
+      description:
+        "Molaridad, molalidad, normalidad, porcentajes, fracción molar, ppm, ppb y más.",
+      icon: "calculator-outline" as const,
+      route: "/modal" as const,
+    },
+    {
+      title: "TABLA PERIÓDICA",
+      description: "Elementos, símbolos, números atómicos y masas atómicas.",
+      icon: "grid-outline" as const,
+      route: "/modal" as const,
+    },
+    {
+      title: "SUSTANCIAS Y MATERIALES",
+      description:
+        "Fórmulas, propiedades, comportamiento y elementos de laboratorio.",
+      icon: "water-outline" as const,
+      route: "/modal" as const,
+    },
+  ];
+
+  return (
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View style={[styles.mark, { backgroundColor: colors.accentSoft }]}>
+            <Ionicons name="flask" size={25} color={colors.accent} />
+          </View>
+          <ThemedText style={[styles.eyebrow, { color: colors.accent }]}>
+            QUIMICA Y LABORATORIO
+          </ThemedText>
+          <ThemedText style={[styles.title, { color: colors.text }]}>
+            QuimiLab EDU
+          </ThemedText>
+          <ThemedText style={[styles.subtitle, { color: colors.muted }]}>
+            Química y laboratorio, paso a paso
+          </ThemedText>
+          <ThemedText style={[styles.intro, { color: colors.muted }]}>
+            Calculá, comprendé y realizá preparaciones de laboratorio con
+            explicaciones claras, materiales adecuados y procedimientos guiados.
+          </ThemedText>
+        </View>
+
+        <View style={styles.actionsGrid}>
+          {actions.map((action) => (
+            <Pressable
+              key={action.title}
+              accessibilityRole="button"
+              accessibilityLabel={action.title}
+              onPress={() => router.push(action.route)}
+              style={({ pressed }) => [
+                styles.action,
+                {
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <View
+                style={[styles.iconBox, { backgroundColor: colors.accentSoft }]}
+              >
+                <Ionicons name={action.icon} size={24} color={colors.accent} />
+              </View>
+              <ThemedText style={[styles.actionTitle, { color: colors.text }]}>
+                {action.title}
+              </ThemedText>
+              <ThemedText
+                style={[styles.actionDescription, { color: colors.muted }]}
+              >
+                {action.description}
+              </ThemedText>
+              <Ionicons
+                name="arrow-forward"
+                size={18}
+                color={colors.accent}
+                style={styles.arrow}
+              />
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={[styles.learningNote, { borderColor: colors.border }]}>
+          <Ionicons name="sparkles-outline" size={19} color={colors.accent} />
+          <View style={styles.noteCopy}>
+            <ThemedText style={[styles.noteText, { color: colors.text }]}>
+              Aprender haciendo
+            </ThemedText>
+            <ThemedText
+              style={[styles.noteDescription, { color: colors.muted }]}
+            >
+              QuimiLab acompaña al estudiante desde el cálculo hasta la
+              experiencia de laboratorio.
+            </ThemedText>
+          </View>
+        </View>
+
+        <ThemedText style={[styles.footer, { color: colors.muted }]}>
+          Proyecto educativo{`\n`}Autora: Mariela Ibañez
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  safeArea: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  header: {
+    marginBottom: 24,
+  },
+  mark: {
+    alignItems: "center",
+    borderRadius: 14,
+    height: 52,
+    justifyContent: "center",
+    marginBottom: 20,
+    width: 52,
+  },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginBottom: 7,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: "800",
+    lineHeight: 40,
+    marginBottom: 7,
+  },
+  subtitle: {
+    fontSize: 18,
+    lineHeight: 25,
+    marginBottom: 14,
+  },
+  intro: {
+    fontSize: 15,
+    lineHeight: 23,
+    maxWidth: 500,
+  },
+  actionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  action: {
+    borderRadius: 12,
+    borderWidth: 1,
+    minHeight: 188,
+    padding: 16,
+    width: "48%",
+  },
+  iconBox: {
+    alignItems: "center",
+    borderRadius: 10,
+    height: 42,
+    justifyContent: "center",
+    marginBottom: 14,
+    width: 42,
+  },
+  actionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    lineHeight: 21,
+    marginBottom: 7,
+  },
+  actionDescription: {
+    flexShrink: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  arrow: {
+    bottom: 15,
+    position: "absolute",
+    right: 15,
+  },
+  learningNote: {
+    alignItems: "center",
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 24,
+    padding: 15,
+  },
+  noteCopy: {
+    flex: 1,
+  },
+  noteText: {
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
+  noteDescription: {
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 2,
+  },
+  footer: {
+    fontSize: 12,
+    marginTop: 24,
+    textAlign: "center",
   },
 });
