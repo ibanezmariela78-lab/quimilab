@@ -19,6 +19,8 @@ export default function RootLayout() {
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}
         />
+        <Stack.Screen name="molar-mass" options={{ title: "Masa molar" }} />
+        <Stack.Screen name="molarity" options={{ title: "Molaridad" }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
