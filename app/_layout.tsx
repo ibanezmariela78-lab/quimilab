@@ -28,6 +28,7 @@ export default function RootLayout() {
           name="mole-fraction"
           options={{ title: "Fracción molar" }}
         />
+        <Stack.Screen name="trace-concentrations" options={{ title: "ppm y ppb" }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

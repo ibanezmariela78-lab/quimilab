@@ -199,6 +199,21 @@ export default function MolarMassScreen() {
                 Fracción molar
               </ThemedText>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Calcular ppm y ppb"
+              onPress={() => router.push("/trace-concentrations")}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons name="analytics-outline" size={18} color={colors.accent} />
+              <ThemedText style={[styles.secondaryButtonText, { color: colors.accent }]}>ppm y ppb</ThemedText>
+            </Pressable>
           </View>
 
           <View
