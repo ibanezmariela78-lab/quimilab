@@ -24,6 +24,10 @@ export default function RootLayout() {
         <Stack.Screen name="molality" options={{ title: "Molalidad" }} />
         <Stack.Screen name="percentages" options={{ title: "Porcentajes" }} />
         <Stack.Screen name="normality" options={{ title: "Normalidad" }} />
+        <Stack.Screen
+          name="mole-fraction"
+          options={{ title: "Fracción molar" }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

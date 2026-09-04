@@ -160,13 +160,44 @@ export default function MolarMassScreen() {
               style={({ pressed }) => [
                 styles.secondaryButton,
                 {
-                  backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
                   borderColor: colors.border,
                 },
               ]}
             >
               <Ionicons name="flash-outline" size={18} color={colors.accent} />
-              <ThemedText style={[styles.secondaryButtonText, { color: colors.accent }]}>Normalidad</ThemedText>
+              <ThemedText
+                style={[styles.secondaryButtonText, { color: colors.accent }]}
+              >
+                Normalidad
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Calcular fracción molar"
+              onPress={() => router.push("/mole-fraction")}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons
+                name="pie-chart-outline"
+                size={18}
+                color={colors.accent}
+              />
+              <ThemedText
+                style={[styles.secondaryButtonText, { color: colors.accent }]}
+              >
+                Fracción molar
+              </ThemedText>
             </Pressable>
           </View>
 
