@@ -153,6 +153,21 @@ export default function MolarMassScreen() {
                 Porcentajes
               </ThemedText>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Preparar por normalidad"
+              onPress={() => router.push("/normality")}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons name="flash-outline" size={18} color={colors.accent} />
+              <ThemedText style={[styles.secondaryButtonText, { color: colors.accent }]}>Normalidad</ThemedText>
+            </Pressable>
           </View>
 
           <View
