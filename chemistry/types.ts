@@ -8,10 +8,6 @@ export type ParsedFormula = {
 export type ElementContribution = {
   symbol: string;
   name: string;
-  safetyClassification?:
-    | "educational"
-    | "requiresSupervision"
-    | "highPrecaution";
   spanishName: string;
   count: number;
   atomicWeight: number;
@@ -35,7 +31,13 @@ export type SubstanceInfo = {
     | "educational"
     | "requiresSupervision"
     | "highPrecaution";
-  physicalState?: "solid" | "liquid" | "viscousLiquid" | "semisolid";
+  physicalState?:
+    | "solid"
+    | "liquid"
+    | "viscousLiquid"
+    | "semisolid"
+    | "gas"
+    | null;
   preparationType?:
     | "solution"
     | "suspension"
@@ -43,6 +45,35 @@ export type SubstanceInfo = {
     | "solidMixture"
     | "semisolid";
   observations?: string[];
+  waterSolubility?: {
+    classification:
+      | "soluble"
+      | "verySoluble"
+      | "slightlySoluble"
+      | "practicallyInsoluble"
+      | "miscible"
+      | "immiscible"
+      | null;
+    description: string | null;
+    temperatureDependence: string | null;
+  } | null;
+  dissolutionBehavior?:
+    | "exothermic"
+    | "endothermic"
+    | "approximatelyNeutral"
+    | "unknown"
+    | null;
+  meltingPointC?: number | null;
+  boilingPointC?: number | null;
+  thermalWarning?: string | null;
+  preparationTypes?: (
+    | "solution"
+    | "suspension"
+    | "emulsion"
+    | "solidMixture"
+    | "dispersion"
+    | "unknown"
+  )[];
   solubility?: string;
   temperatureBehavior?: string;
   risks?: string[];

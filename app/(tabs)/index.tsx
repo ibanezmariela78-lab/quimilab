@@ -59,7 +59,7 @@ export default function HomeScreen() {
       description:
         "Fórmulas, propiedades, comportamiento y elementos de laboratorio.",
       icon: "water-outline" as const,
-      route: "/modal" as const,
+      route: "/sustancias-materiales" as const,
     },
   ];
 
