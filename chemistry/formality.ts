@@ -1,5 +1,5 @@
-import { getSpecialSafetyMessage } from "@/chemistry/equivalence";
 import { parsePositiveNumber } from "@/chemistry/conversions";
+import { getSpecialSafetyMessage } from "@/chemistry/equivalence";
 import { calculateMolarMass } from "@/chemistry/molarMass";
 import type { MolarMassCalculation } from "@/chemistry/types";
 
@@ -34,13 +34,18 @@ export function calculateFormalityPreparation(
   const molarMass = calculateMolarMass(formula);
   if (molarMass.error) return { error: molarMass.error, molarMass };
   if (molarMass.warnings.length > 0 || molarMass.molarMass === null) {
-    return { error: "No se puede calcular porque falta un peso atómico estándar.", molarMass };
+    return {
+      error: "No se puede calcular porque falta un peso atómico estándar.",
+      molarMass,
+    };
   }
 
   const formality = parsePositiveNumber(formalityInput);
-  if (formality === null) return { error: "Ingresá una formalidad mayor que cero." };
+  if (formality === null)
+    return { error: "Ingresá una formalidad mayor que cero." };
   const volume = parsePositiveNumber(volumeInput);
-  if (volume === null) return { error: "Ingresá un volumen final mayor que cero." };
+  if (volume === null)
+    return { error: "Ingresá un volumen final mayor que cero." };
 
   const volumeLiters = volumeUnit === "mL" ? volume / 1000 : volume;
   const formulaMoles = formality * volumeLiters;

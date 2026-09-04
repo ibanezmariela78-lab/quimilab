@@ -12,37 +12,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-    calculateFormalityPreparation,
-    type FormalityPreparationResult,
-    type FormalityVolumeUnit,
-} from "@/chemistry/formality";
+    calculateDilution,
+    type DilutionConcentrationType,
+    type DilutionResult,
+    type DilutionVolumeUnit,
+} from "@/chemistry/dilution";
 import { ThemedText } from "@/components/themed-text";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-
-const materials = [
-  "Balanza",
-  "Espátula",
-  "Recipiente para pesar",
-  "Vaso de precipitados",
-  "Varilla de vidrio",
-  "Embudo",
-  "Matraz aforado",
-  "Piseta",
-  "Agua destilada o solvente correspondiente",
-];
-
-const procedure = [
-  "Reuní los materiales indicados.",
-  "Colocá el recipiente para pesar sobre la balanza.",
-  "Tará la balanza.",
-  "Pesá la cantidad de soluto calculada.",
-  "Disolvé el soluto en una cantidad menor de solvente.",
-  "Transferí la preparación al matraz aforado.",
-  "Enjuagá el recipiente y agregá los lavados al matraz.",
-  "Completá con solvente hasta el volumen final.",
-  "Tapá y homogeneizá.",
-  "Rotulá la preparación.",
-];
 
 type Colors = {
   background: string;
@@ -57,12 +33,33 @@ type Colors = {
   warning: string;
 };
 
-export default function FormalityScreen() {
-  const [formula, setFormula] = useState("");
-  const [formality, setFormality] = useState("");
-  const [volume, setVolume] = useState("");
-  const [volumeUnit, setVolumeUnit] = useState<FormalityVolumeUnit>("mL");
-  const [result, setResult] = useState<FormalityPreparationResult | null>(null);
+const materials = [
+  "Pipeta o material volumétrico adecuado",
+  "Propipeta cuando corresponda",
+  "Matraz aforado",
+  "Piseta",
+  "Solvente correspondiente",
+  "Elementos de protección requeridos",
+];
+
+const procedure = [
+  "Reuní el material de laboratorio indicado.",
+  "Medí el volumen calculado de solución madre utilizando material volumétrico adecuado.",
+  "Transferilo al recipiente volumétrico correspondiente.",
+  "Agregá solvente hasta acercarte al volumen final.",
+  "Ajustá cuidadosamente hasta la marca final.",
+  "Homogeneizá.",
+  "Rotulá la solución preparada.",
+];
+
+export default function DilutionsScreen() {
+  const [substance, setSubstance] = useState("");
+  const [type, setType] = useState<DilutionConcentrationType>("molarity");
+  const [initialConcentration, setInitialConcentration] = useState("");
+  const [finalConcentration, setFinalConcentration] = useState("");
+  const [finalVolume, setFinalVolume] = useState("");
+  const [volumeUnit, setVolumeUnit] = useState<DilutionVolumeUnit>("mL");
+  const [result, setResult] = useState<DilutionResult | null>(null);
   const [error, setError] = useState("");
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -82,7 +79,7 @@ export default function FormalityScreen() {
     : {
         background: "#F4F8F7",
         surface: "#FFFFFF",
-        pressed: "#E8F3F0",
+        pressed: "#E8F3E0",
         text: "#17343A",
         muted: "#5A7375",
         accent: "#087F73",
@@ -91,12 +88,15 @@ export default function FormalityScreen() {
         input: "#FFFFFF",
         warning: "#9A6815",
       };
+  const unitLabel = type === "molarity" ? "M" : "N";
 
   function handleCalculate() {
-    const calculation = calculateFormalityPreparation(
-      formula,
-      formality,
-      volume,
+    const calculation = calculateDilution(
+      substance,
+      type,
+      initialConcentration,
+      finalConcentration,
+      finalVolume,
       volumeUnit,
     );
     if ("error" in calculation) {
@@ -123,14 +123,14 @@ export default function FormalityScreen() {
         >
           <View style={styles.header}>
             <View style={[styles.mark, { backgroundColor: colors.soft }]}>
-              <Ionicons name="layers-outline" size={25} color={colors.accent} />
+              <Ionicons name="beaker-outline" size={25} color={colors.accent} />
             </View>
             <ThemedText style={[styles.title, { color: colors.text }]}>
-              Preparar por formalidad
+              Preparar una dilución
             </ThemedText>
             <ThemedText style={[styles.intro, { color: colors.muted }]}>
-              La formalidad expresa cuántos moles fórmula de una sustancia se
-              utilizaron por litro de solución.
+              Calculá cuánto volumen de una solución madre necesitás para
+              obtener una solución más diluida.
             </ThemedText>
           </View>
           <View
@@ -140,38 +140,71 @@ export default function FormalityScreen() {
             ]}
           >
             <Field
-              label="Fórmula química"
-              value={formula}
-              onChangeText={setFormula}
-              placeholder="NaCl"
+              label="Fórmula o nombre de la sustancia"
+              value={substance}
+              onChangeText={setSubstance}
+              placeholder="HCl"
               colors={colors}
             />
+            <ThemedText style={[styles.label, { color: colors.text }]}>
+              Tipo de concentración
+            </ThemedText>
+            <View style={styles.segmented}>
+              {(["molarity", "normality"] as const).map((option) => (
+                <Pressable
+                  key={option}
+                  onPress={() => setType(option)}
+                  style={[
+                    styles.segment,
+                    {
+                      backgroundColor:
+                        type === option ? colors.accent : colors.input,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <ThemedText
+                    style={{
+                      color: type === option ? "#FFFFFF" : colors.text,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {option === "molarity" ? "Molaridad" : "Normalidad"}
+                  </ThemedText>
+                </Pressable>
+              ))}
+            </View>
             <Field
-              label="Formalidad deseada"
-              value={formality}
-              onChangeText={setFormality}
-              placeholder="1"
+              label={`Concentración de la solución madre (C1) · ${unitLabel}`}
+              value={initialConcentration}
+              onChangeText={setInitialConcentration}
+              placeholder={type === "molarity" ? "1" : "2"}
               keyboardType="decimal-pad"
-              suffix="mol fórmula/L"
               colors={colors}
             />
             <Field
-              label="Volumen final"
-              value={volume}
-              onChangeText={setVolume}
+              label={`Concentración deseada (C2) · ${unitLabel}`}
+              value={finalConcentration}
+              onChangeText={setFinalConcentration}
+              placeholder={type === "molarity" ? "0,5" : "0,5"}
+              keyboardType="decimal-pad"
+              colors={colors}
+            />
+            <Field
+              label="Volumen final deseado"
+              value={finalVolume}
+              onChangeText={setFinalVolume}
               placeholder="500"
               keyboardType="decimal-pad"
               colors={colors}
             />
             <ThemedText style={[styles.label, { color: colors.text }]}>
-              Unidad de volumen
+              Unidad del volumen
             </ThemedText>
             <View style={styles.segmented}>
               {(["mL", "L"] as const).map((unit) => (
                 <Pressable
                   key={unit}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Seleccionar ${unit}`}
                   onPress={() => setVolumeUnit(unit)}
                   style={[
                     styles.segment,
@@ -196,7 +229,7 @@ export default function FormalityScreen() {
             <Pressable
               onPress={handleCalculate}
               accessibilityRole="button"
-              accessibilityLabel="Calcular preparación por formalidad"
+              accessibilityLabel="Calcular dilución"
               style={({ pressed }) => [
                 styles.button,
                 { backgroundColor: pressed ? colors.pressed : colors.accent },
@@ -247,7 +280,6 @@ type FieldProps = {
   onChangeText: (value: string) => void;
   placeholder: string;
   keyboardType?: "default" | "decimal-pad";
-  suffix?: string;
   colors: Colors;
 };
 function Field({
@@ -256,7 +288,6 @@ function Field({
   onChangeText,
   placeholder,
   keyboardType = "default",
-  suffix,
   colors,
 }: FieldProps) {
   return (
@@ -264,30 +295,23 @@ function Field({
       <ThemedText style={[styles.label, { color: colors.text }]}>
         {label}
       </ThemedText>
-      <View style={styles.inputRow}>
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType={keyboardType}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={colors.muted}
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.input,
-              borderColor: colors.border,
-              color: colors.text,
-            },
-          ]}
-          value={value}
-        />
-        {suffix ? (
-          <ThemedText style={[styles.suffix, { color: colors.muted }]}>
-            {suffix}
-          </ThemedText>
-        ) : null}
-      </View>
+      <TextInput
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType={keyboardType}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.muted}
+        style={[
+          styles.input,
+          {
+            backgroundColor: colors.input,
+            borderColor: colors.border,
+            color: colors.text,
+          },
+        ]}
+        value={value}
+      />
     </View>
   );
 }
@@ -296,9 +320,10 @@ function Result({
   result,
   colors,
 }: {
-  result: FormalityPreparationResult;
+  result: DilutionResult;
   colors: Colors;
 }) {
+  const unit = result.concentrationType === "molarity" ? "M" : "N";
   const lightText = colors.accent === "#087F73";
   return (
     <View style={styles.resultArea}>
@@ -307,19 +332,14 @@ function Result({
           Sustancia
         </ThemedText>
         <ThemedText style={[styles.resultTitle, { color: colors.text }]}>
-          {result.molarMass.substanceName ?? result.formula}
+          {result.substanceName ?? result.substance}
         </ThemedText>
         <ThemedText style={[styles.detailLabel, { color: colors.accent }]}>
-          Fórmula
-        </ThemedText>
-        <ThemedText style={[styles.resultFormula, { color: colors.text }]}>
-          {result.formula}
-        </ThemedText>
-        <ThemedText style={[styles.detailLabel, { color: colors.accent }]}>
-          Masa molar
+          Concentración
         </ThemedText>
         <ThemedText style={[styles.body, { color: colors.text }]}>
-          {format(result.molarMass.molarMass ?? 0)} g/mol
+          Solución madre: {format(result.initialConcentration)} {unit}
+          {`\n`}Solución final: {format(result.finalConcentration)} {unit}
         </ThemedText>
       </View>
       <View
@@ -332,27 +352,26 @@ function Result({
           Explicación paso a paso
         </ThemedText>
         <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-          Paso 1: Convertir volumen a litros
+          Paso 1: Identificar los datos
         </ThemedText>
         <ThemedText style={[styles.equation, { color: colors.text }]}>
-          {format(result.volume)} {result.volumeUnit} ={" "}
-          {format(result.volumeLiters, 3)} L
+          C1 = {format(result.initialConcentration)} {unit}
+          {`\n`}C2 = {format(result.finalConcentration)} {unit}
+          {`\n`}V2 = {format(result.finalVolume)} {result.volumeUnit}
         </ThemedText>
         <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-          Paso 2: Calcular moles fórmula
+          Paso 2: Relación de dilución
         </ThemedText>
         <ThemedText style={[styles.equation, { color: colors.text }]}>
-          n fórmula = F × V{`\n`}n fórmula = {format(result.formality)} ×{" "}
-          {format(result.volumeLiters, 3)}
-          {`\n`}n fórmula = {format(result.formulaMoles, 3)} mol fórmula
+          C1 × V1 = C2 × V2
         </ThemedText>
         <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-          Paso 3: Convertir moles fórmula a gramos
+          Paso 3: Despejar V1
         </ThemedText>
         <ThemedText style={[styles.equation, { color: colors.text }]}>
-          masa = n fórmula × MM{`\n`}masa = {format(result.formulaMoles, 3)} ×{" "}
-          {format(result.molarMass.molarMass ?? 0)}
-          {`\n`}masa = {format(result.gramsNeeded, 4)} g
+          V1 = (C2 × V2) / C1{`\n`}V1 = ({format(result.finalConcentration)} ×{" "}
+          {format(result.finalVolume)}) / {format(result.initialConcentration)}
+          {`\n`}V1 = {format(result.stockVolume)} {result.volumeUnit}
         </ThemedText>
       </View>
       <View style={[styles.resultCard, { backgroundColor: colors.accent }]}>
@@ -370,11 +389,16 @@ function Result({
             { color: lightText ? "#FFFFFF" : "#10242A" },
           ]}
         >
-          {format(result.gramsNeeded, 2)} g de {result.formula}
+          Se necesitan {format(result.stockVolume)} {result.volumeUnit}
+          {result.volumeUnit === "L"
+            ? ` (${format(result.stockVolumeMilliliters)} mL)`
+            : ""}{" "}
+          de solución madre
         </ThemedText>
         <ThemedText style={{ color: lightText ? "#FFFFFF" : "#10242A" }}>
-          para preparar {format(result.volume)} {result.volumeUnit} de solución{" "}
-          {format(result.formality)} F
+          de {result.substance} {format(result.initialConcentration)} {unit}{" "}
+          para preparar {format(result.finalVolume)} {result.volumeUnit} finales
+          de {format(result.finalConcentration)} {unit}.
         </ThemedText>
       </View>
       <View
@@ -389,43 +413,23 @@ function Result({
           color={colors.accent}
         />
         <ThemedText style={[styles.body, { color: colors.text }]}>
-          El volumen indicado corresponde al volumen FINAL de la solución. No
-          significa agregar el soluto a ese volumen completo de agua. Primero se
-          disuelve en una cantidad menor de solvente y posteriormente se
-          completa hasta alcanzar el volumen final.
+          El volumen indicado corresponde al volumen FINAL de la solución. Se
+          mide el volumen calculado de solución madre y luego se completa con
+          solvente hasta alcanzar el volumen final. No se calcula
+          automáticamente un volumen de solvente como V2 - V1.
         </ThemedText>
       </View>
-      <View
-        style={[
-          styles.note,
-          { backgroundColor: colors.soft, borderColor: colors.border },
-        ]}
-      >
-        <ThemedText style={[styles.body, { color: colors.text }]}>
-          Un mol fórmula representa una cantidad de sustancia basada en la
-          fórmula química utilizada para preparar la solución. En compuestos que
-          se disocian, la formalidad describe lo que se agregó inicialmente y no
-          necesariamente las especies presentes después de la disolución.
-        </ThemedText>
-      </View>
-      {result.molarMass.substanceInfo?.observations ? (
+      {result.concentrationType === "normality" ? (
         <View
           style={[
-            styles.card,
-            { backgroundColor: colors.surface, borderColor: colors.border },
+            styles.note,
+            { backgroundColor: colors.soft, borderColor: colors.border },
           ]}
         >
-          <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-            Observaciones de la sustancia
+          <ThemedText style={[styles.body, { color: colors.text }]}>
+            La normalidad depende de la reacción considerada. C1 y C2 deben
+            estar expresadas bajo el mismo criterio de equivalencia.
           </ThemedText>
-          {result.molarMass.substanceInfo.observations.map((item) => (
-            <ThemedText
-              key={item}
-              style={[styles.body, { color: colors.text }]}
-            >
-              • {item}
-            </ThemedText>
-          ))}
         </View>
       ) : null}
       {result.safetyWarning ? (
@@ -440,7 +444,8 @@ function Result({
             {result.safetyWarning}
           </ThemedText>
         </View>
-      ) : (
+      ) : null}
+      {!result.safetyWarning ? (
         <View
           style={[
             styles.card,
@@ -467,14 +472,28 @@ function Result({
             </ThemedText>
           ))}
         </View>
-      )}
+      ) : null}
+      <View
+        style={[
+          styles.disabled,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+      >
+        <ThemedText style={[styles.sectionTitle, { color: colors.muted }]}>
+          Preparar desde reactivo comercial
+        </ThemedText>
+        <ThemedText style={[styles.body, { color: colors.muted }]}>
+          Próximamente: cálculo a partir de porcentaje, densidad y concentración
+          del reactivo.
+        </ThemedText>
+      </View>
     </View>
   );
 }
 
-function format(value: number, decimals = 3): string {
+function format(value: number): string {
   return value
-    .toFixed(decimals)
+    .toFixed(4)
     .replace(/\.?(0+)$/u, "")
     .replace(".", ",");
 }
@@ -497,15 +516,14 @@ const styles = StyleSheet.create({
   card: { borderRadius: 12, borderWidth: 1, marginBottom: 12, padding: 16 },
   field: { marginBottom: 14 },
   label: { fontSize: 15, fontWeight: "700", marginBottom: 8 },
-  inputRow: { alignItems: "center", flexDirection: "row" },
   input: {
     borderRadius: 9,
     borderWidth: 1,
-    flex: 1,
     fontSize: 17,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+  inputRow: { alignItems: "center", flexDirection: "row" },
   suffix: { fontSize: 14, marginLeft: 8 },
   segmented: { flexDirection: "row", gap: 8, marginBottom: 16 },
   segment: {
@@ -539,19 +557,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.7,
-    marginTop: 2,
     textTransform: "uppercase",
   },
   resultTitle: {
     fontSize: 20,
     fontWeight: "800",
     lineHeight: 28,
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  resultFormula: {
-    fontSize: 19,
-    fontWeight: "700",
     marginBottom: 10,
     marginTop: 4,
   },
@@ -569,9 +580,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   finalMass: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "800",
-    lineHeight: 27,
+    lineHeight: 26,
     marginVertical: 8,
   },
   note: {
@@ -593,5 +604,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   listItem: { fontSize: 14, lineHeight: 23 },
+  disabled: {
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+    opacity: 0.7,
+    padding: 16,
+  },
   mass: { fontSize: 24, fontWeight: "800" },
 });

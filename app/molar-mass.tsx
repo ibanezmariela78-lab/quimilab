@@ -206,29 +206,70 @@ export default function MolarMassScreen() {
               style={({ pressed }) => [
                 styles.secondaryButton,
                 {
-                  backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
                   borderColor: colors.border,
                 },
               ]}
             >
-              <Ionicons name="analytics-outline" size={18} color={colors.accent} />
-              <ThemedText style={[styles.secondaryButtonText, { color: colors.accent }]}>ppm y ppb</ThemedText>
-            </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Preparar por formalidad"
-                onPress={() => router.push("/formality")}
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  {
-                    backgroundColor: pressed ? colors.surfacePressed : colors.surface,
-                    borderColor: colors.border,
-                  },
-                ]}
+              <Ionicons
+                name="analytics-outline"
+                size={18}
+                color={colors.accent}
+              />
+              <ThemedText
+                style={[styles.secondaryButtonText, { color: colors.accent }]}
               >
-                <Ionicons name="layers-outline" size={18} color={colors.accent} />
-                <ThemedText style={[styles.secondaryButtonText, { color: colors.accent }]}>Formalidad</ThemedText>
-              </Pressable>
+                ppm y ppb
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Preparar por formalidad"
+              onPress={() => router.push("/formality")}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons name="layers-outline" size={18} color={colors.accent} />
+              <ThemedText
+                style={[styles.secondaryButtonText, { color: colors.accent }]}
+              >
+                Formalidad
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Preparar una dilución"
+              onPress={() => router.push("/dilutions")}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons
+                name="swap-vertical-outline"
+                size={18}
+                color={colors.accent}
+              />
+              <ThemedText
+                style={[styles.secondaryButtonText, { color: colors.accent }]}
+              >
+                Diluciones
+              </ThemedText>
+            </Pressable>
           </View>
 
           <View
