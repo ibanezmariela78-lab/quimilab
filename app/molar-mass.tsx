@@ -107,6 +107,27 @@ export default function MolarMassScreen() {
                 Molaridad
               </ThemedText>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Preparar por molalidad"
+              onPress={() => router.push("/molality")}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons name="water-outline" size={18} color={colors.accent} />
+              <ThemedText
+                style={[styles.secondaryButtonText, { color: colors.accent }]}
+              >
+                Molalidad
+              </ThemedText>
+            </Pressable>
           </View>
 
           <View
