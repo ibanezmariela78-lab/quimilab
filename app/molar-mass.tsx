@@ -128,6 +128,31 @@ export default function MolarMassScreen() {
                 Molalidad
               </ThemedText>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Preparar por porcentajes"
+              onPress={() => router.push("/percentages")}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons
+                name="pie-chart-outline"
+                size={18}
+                color={colors.accent}
+              />
+              <ThemedText
+                style={[styles.secondaryButtonText, { color: colors.accent }]}
+              >
+                Porcentajes
+              </ThemedText>
+            </Pressable>
           </View>
 
           <View

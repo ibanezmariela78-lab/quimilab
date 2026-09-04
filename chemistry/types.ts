@@ -27,6 +27,13 @@ export type MolarMassCalculation = {
 
 export type SubstanceInfo = {
   name: string;
+  physicalState?: "solid" | "liquid" | "viscousLiquid" | "semisolid";
+  preparationType?:
+    | "solution"
+    | "suspension"
+    | "emulsion"
+    | "solidMixture"
+    | "semisolid";
   observations?: string[];
   solubility?: string;
   temperatureBehavior?: string;

@@ -22,6 +22,7 @@ export default function RootLayout() {
         <Stack.Screen name="molar-mass" options={{ title: "Masa molar" }} />
         <Stack.Screen name="molarity" options={{ title: "Molaridad" }} />
         <Stack.Screen name="molality" options={{ title: "Molalidad" }} />
+        <Stack.Screen name="percentages" options={{ title: "Porcentajes" }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
