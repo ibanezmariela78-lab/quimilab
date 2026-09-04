@@ -29,6 +29,7 @@ export default function RootLayout() {
           options={{ title: "Fracción molar" }}
         />
         <Stack.Screen name="trace-concentrations" options={{ title: "ppm y ppb" }} />
+          <Stack.Screen name="formality" options={{ title: "Formalidad" }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

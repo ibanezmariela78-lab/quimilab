@@ -214,6 +214,21 @@ export default function MolarMassScreen() {
               <Ionicons name="analytics-outline" size={18} color={colors.accent} />
               <ThemedText style={[styles.secondaryButtonText, { color: colors.accent }]}>ppm y ppb</ThemedText>
             </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Preparar por formalidad"
+                onPress={() => router.push("/formality")}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  {
+                    backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Ionicons name="layers-outline" size={18} color={colors.accent} />
+                <ThemedText style={[styles.secondaryButtonText, { color: colors.accent }]}>Formalidad</ThemedText>
+              </Pressable>
           </View>
 
           <View
