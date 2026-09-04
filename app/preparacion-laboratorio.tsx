@@ -29,7 +29,7 @@ const preparationOptions: PreparationOption[] = [
     type: "solidLiquidSolution",
     title: "Sólido + líquido",
     description:
-      "Preparación de una solución a partir de un soluto sólido y un solvente líquido.",
+      "QuimiLab analiza la solubilidad para decidir si se forma una solución, suspensión o dispersión.",
   },
   {
     type: "solidSolidMixture",
@@ -52,13 +52,16 @@ const preparationOptions: PreparationOption[] = [
 ];
 
 export default function PreparacionLaboratorioScreen() {
-  const [tipo, setTipo] = useState<PreparationType>("solidLiquidSolution");
   const [formula, setFormula] = useState("CaCl2");
 
+  const [tipo, setTipo] = useState<PreparationType>("solidLiquidSolution");
+
   const [cantidadFinal, setCantidadFinal] = useState("500");
+
   const [unidadFinal, setUnidadFinal] = useState<"mL" | "L" | "g" | "kg">("mL");
 
   const cantidadNumerica = Number(cantidadFinal.replace(",", "."));
+
   const interactionData = useMemo(() => {
     if (!formula.trim()) {
       return null;
@@ -90,18 +93,26 @@ export default function PreparacionLaboratorioScreen() {
   const plan = useMemo(() => {
     return createLabPreparationPlan({
       type: tipo,
+
       finalAmount:
         Number.isFinite(cantidadNumerica) && cantidadNumerica > 0
           ? cantidadNumerica
           : undefined,
+
       finalUnit: unidadFinal,
+
       safetyLevel: "educational",
+
+      mixtureType:
+        tipo === "solidLiquidSolution" ? mixtureAnalysis?.type : undefined,
     });
-  }, [tipo, cantidadNumerica, unidadFinal]);
+  }, [tipo, cantidadNumerica, unidadFinal, mixtureAnalysis]);
 
   const materiales = plan.equipmentIds
     .map((id) => labEquipment.find((item) => item.id === id))
-    .filter((item) => item !== undefined);
+    .filter(
+      (item): item is (typeof labEquipment)[number] => item !== undefined,
+    );
 
   return (
     <>
@@ -119,23 +130,24 @@ export default function PreparacionLaboratorioScreen() {
         <Text style={styles.title}>Preparación de laboratorio</Text>
 
         <Text style={styles.subtitle}>
-          QuimiLab selecciona los materiales y organiza el procedimiento según
-          el tipo de preparación.
+          QuimiLab analiza la sustancia, identifica el tipo de preparación y
+          selecciona materiales y procedimiento.
         </Text>
+
         <View style={styles.inputCard}>
-          <Text style={styles.label}>Fórmula química</Text>
+          <Text style={styles.label}>Fórmula química o nombre</Text>
 
           <TextInput
             value={formula}
             onChangeText={setFormula}
             style={styles.input}
-            placeholder="Ejemplo: CaCl2"
+            placeholder="Ejemplo: CaCl2 o Talco"
             autoCapitalize="none"
           />
 
           <Text style={styles.helperText}>
-            QuimiLab utilizará esta fórmula para consultar el comportamiento de
-            la sustancia.
+            QuimiLab utilizará esta información para consultar el comportamiento
+            de la sustancia.
           </Text>
         </View>
 
@@ -196,12 +208,13 @@ export default function PreparacionLaboratorioScreen() {
             ))}
           </View>
         </View>
+
         {tipo === "solidLiquidSolution" && (
           <View style={styles.analysisCard}>
             <Text style={styles.analysisLabel}>ANÁLISIS QUÍMICO</Text>
 
             <Text style={styles.analysisTitle}>
-              {formula.trim() || "Sin fórmula"}
+              {formula.trim() || "Sin sustancia"}
             </Text>
 
             {interactionData ? (
@@ -223,20 +236,20 @@ export default function PreparacionLaboratorioScreen() {
                 )}
 
                 {interactionData.thermalBehavior === "exothermic" && (
-                  <View style={styles.warningCard}>
+                  <View style={styles.warningInside}>
                     <Text style={styles.warningTitle}>
                       Comportamiento térmico
                     </Text>
 
                     <Text style={styles.warningText}>
-                      La disolución puede liberar calor y aumentar la
-                      temperatura de la preparación.
+                      {interactionData.warning ??
+                        "La disolución puede liberar calor y aumentar la temperatura de la preparación."}
                     </Text>
                   </View>
                 )}
 
                 {interactionData.thermalBehavior === "endothermic" && (
-                  <View style={styles.infoCard}>
+                  <View style={styles.infoInside}>
                     <Text style={styles.infoTitle}>Comportamiento térmico</Text>
 
                     <Text style={styles.infoText}>
@@ -246,15 +259,17 @@ export default function PreparacionLaboratorioScreen() {
                   </View>
                 )}
 
-                {interactionData.warning && (
-                  <View style={styles.warningCard}>
-                    <Text style={styles.warningTitle}>Observación</Text>
+                {interactionData.thermalBehavior !== "exothermic" &&
+                  interactionData.thermalBehavior !== "endothermic" &&
+                  interactionData.warning && (
+                    <View style={styles.infoInside}>
+                      <Text style={styles.infoTitle}>Observación</Text>
 
-                    <Text style={styles.warningText}>
-                      {interactionData.warning}
-                    </Text>
-                  </View>
-                )}
+                      <Text style={styles.infoText}>
+                        {interactionData.warning}
+                      </Text>
+                    </View>
+                  )}
               </>
             ) : (
               <Text style={styles.analysisText}>
@@ -274,37 +289,41 @@ export default function PreparacionLaboratorioScreen() {
           <Text style={styles.resultDescription}>{plan.description}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Materiales necesarios</Text>
+        {materiales.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Materiales necesarios</Text>
 
-          {materiales.map((material) => (
-            <View key={material.id} style={styles.materialRow}>
-              <Text style={styles.bullet}>•</Text>
+            {materiales.map((material) => (
+              <View key={material.id} style={styles.materialRow}>
+                <Text style={styles.bullet}>•</Text>
 
-              <View style={styles.materialContent}>
-                <Text style={styles.materialName}>{material.nombre}</Text>
+                <View style={styles.materialContent}>
+                  <Text style={styles.materialName}>{material.nombre}</Text>
 
-                <Text style={styles.materialReason}>
-                  {material.porqueUsarlo}
-                </Text>
+                  <Text style={styles.materialReason}>
+                    {material.porqueUsarlo}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Procedimiento guiado</Text>
+        {plan.steps.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Procedimiento guiado</Text>
 
-          {plan.steps.map((step, index) => (
-            <View key={`${step}-${index}`} style={styles.step}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>{index + 1}</Text>
+            {plan.steps.map((step, index) => (
+              <View key={`${step}-${index}`} style={styles.step}>
+                <View style={styles.stepNumber}>
+                  <Text style={styles.stepNumberText}>{index + 1}</Text>
+                </View>
+
+                <Text style={styles.stepText}>{step}</Text>
               </View>
-
-              <Text style={styles.stepText}>{step}</Text>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
 
         {plan.warnings.length > 0 && (
           <View style={styles.warningCard}>
@@ -322,14 +341,15 @@ export default function PreparacionLaboratorioScreen() {
           <Text style={styles.infoTitle}>¿Cómo decide QuimiLab?</Text>
 
           <Text style={styles.infoText}>
-            La selección de materiales depende del estado físico de los
-            componentes, el tipo de preparación, la precisión requerida y las
-            características de las sustancias.
+            QuimiLab selecciona los materiales y el procedimiento considerando
+            el estado físico, el tipo de preparación, el comportamiento de la
+            sustancia y la precisión requerida.
           </Text>
 
           <Text style={styles.infoText}>
-            En las próximas etapas esta elección será automática a partir de los
-            datos ingresados por el alumno.
+            Si la sustancia no puede formar una solución, QuimiLab modifica
+            automáticamente el procedimiento para evitar instrucciones
+            incorrectas.
           </Text>
         </View>
       </ScrollView>
@@ -369,6 +389,40 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
+  inputCard: {
+    backgroundColor: "#ffffff",
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#d3e2e0",
+    marginBottom: 22,
+  },
+
+  label: {
+    fontWeight: "800",
+    color: "#173b40",
+    fontSize: 17,
+    marginBottom: 8,
+    marginTop: 8,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: "#cddfdd",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 18,
+    color: "#173b40",
+  },
+
+  helperText: {
+    color: "#617a7b",
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
+  },
+
   optionCard: {
     backgroundColor: "#ffffff",
     borderRadius: 17,
@@ -400,34 +454,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  inputCard: {
-    backgroundColor: "#ffffff",
-    padding: 20,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#d3e2e0",
-    marginTop: 12,
-    marginBottom: 22,
-  },
-
-  label: {
-    fontWeight: "800",
-    color: "#173b40",
-    fontSize: 17,
-    marginBottom: 8,
-    marginTop: 8,
-  },
-
-  input: {
-    borderWidth: 1,
-    borderColor: "#cddfdd",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 18,
-    color: "#173b40",
-  },
-
   unitRow: {
     flexDirection: "row",
     gap: 8,
@@ -455,6 +481,43 @@ const styles = StyleSheet.create({
 
   unitTextActive: {
     color: "#ffffff",
+  },
+
+  analysisCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#d5e4e2",
+    padding: 20,
+    marginBottom: 22,
+  },
+
+  analysisLabel: {
+    color: "#0d887d",
+    fontWeight: "800",
+    fontSize: 13,
+    marginBottom: 6,
+  },
+
+  analysisTitle: {
+    color: "#173b40",
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 10,
+  },
+
+  analysisResult: {
+    color: "#0d887d",
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: 14,
+    marginBottom: 8,
+  },
+
+  analysisText: {
+    color: "#4f696b",
+    fontSize: 16,
+    lineHeight: 24,
   },
 
   resultCard: {
@@ -558,10 +621,19 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
+  warningInside: {
+    backgroundColor: "#fff6df",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#ddb85e",
+  },
+
   warningTitle: {
     color: "#805a08",
     fontWeight: "800",
-    fontSize: 19,
+    fontSize: 18,
     marginBottom: 8,
   },
 
@@ -569,13 +641,20 @@ const styles = StyleSheet.create({
     color: "#6c562b",
     fontSize: 16,
     lineHeight: 24,
-    marginBottom: 6,
+    marginBottom: 4,
   },
 
   infoCard: {
     backgroundColor: "#e0f4f0",
     borderRadius: 18,
     padding: 20,
+  },
+
+  infoInside: {
+    backgroundColor: "#e0f4f0",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
   },
 
   infoTitle: {
@@ -590,48 +669,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 8,
-  },
-  helperText: {
-    color: "#617a7b",
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 8,
-  },
-
-  analysisCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#d5e4e2",
-    padding: 20,
-    marginBottom: 22,
-  },
-
-  analysisLabel: {
-    color: "#0d887d",
-    fontWeight: "800",
-    fontSize: 13,
-    marginBottom: 6,
-  },
-
-  analysisTitle: {
-    color: "#173b40",
-    fontSize: 24,
-    fontWeight: "800",
-    marginBottom: 10,
-  },
-
-  analysisResult: {
-    color: "#0d887d",
-    fontSize: 18,
-    fontWeight: "800",
-    marginTop: 14,
-    marginBottom: 8,
-  },
-
-  analysisText: {
-    color: "#4f696b",
-    fontSize: 16,
-    lineHeight: 24,
   },
 });

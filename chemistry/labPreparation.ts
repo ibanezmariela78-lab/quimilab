@@ -1,3 +1,5 @@
+import type { MixtureType } from "./classifyMixture";
+
 export type PreparationType =
   | "solidLiquidSolution"
   | "solidSolidMixture"
@@ -11,6 +13,7 @@ export type PreparationInput = {
   finalAmount?: number;
   finalUnit?: "mL" | "L" | "g" | "kg";
   safetyLevel?: SafetyLevel;
+  mixtureType?: MixtureType;
 };
 
 export type PreparationPlan = {
@@ -44,7 +47,7 @@ export function createLabPreparationPlan(
 
   switch (input.type) {
     case "solidLiquidSolution":
-      return createSolidLiquidSolution(input);
+      return createSolidLiquidPreparation(input);
 
     case "solidSolidMixture":
       return createSolidSolidMixture(input);
@@ -56,15 +59,29 @@ export function createLabPreparationPlan(
       return createViscousPreparation(input);
 
     default:
-      return {
-        title: "Preparación no reconocida",
-        description:
-          "QuimiLab todavía no posee un procedimiento definido para este tipo de preparación.",
-        equipmentIds: [],
-        steps: [],
-        warnings: [],
-        canShowAutonomousProcedure: false,
-      };
+      return createUnknownPreparation();
+  }
+}
+
+function createSolidLiquidPreparation(
+  input: PreparationInput,
+): PreparationPlan {
+  switch (input.mixtureType) {
+    case "suspension":
+      return createSolidLiquidSuspension(input);
+
+    case "dispersion":
+      return createSolidLiquidDispersion(input);
+
+    case "unknown":
+      return createUnknownSolidLiquidPreparation();
+
+    case "solution":
+    case undefined:
+      return createSolidLiquidSolution(input);
+
+    default:
+      return createUnknownSolidLiquidPreparation();
   }
 }
 
@@ -78,9 +95,9 @@ function createSolidLiquidSolution(input: PreparationInput): PreparationPlan {
       : "matraz aforado correspondiente al volumen final";
 
   return {
-    title: "Preparación de un sólido en un líquido",
+    title: "Preparación de una solución sólido + líquido",
     description:
-      "Procedimiento general para preparar una solución a partir de un soluto sólido y un solvente líquido.",
+      "El soluto es soluble en el líquido, por lo que puede utilizarse un procedimiento de disolución y ajuste del volumen final.",
     equipmentIds: [
       "balance",
       "spatula",
@@ -98,8 +115,8 @@ function createSolidLiquidSolution(input: PreparationInput): PreparationPlan {
       "Pesá la cantidad de soluto calculada por QuimiLab.",
       "Colocá en un vaso de precipitados una cantidad de solvente menor al volumen final de la preparación.",
       "Agregá cuidadosamente el soluto al vaso de precipitados.",
-      "Mezclá con una varilla de vidrio hasta lograr la disolución, siempre que la sustancia sea soluble en ese solvente.",
-      `Transferí la preparación al ${volumetricFlaskText}.`,
+      "Mezclá con una varilla de vidrio hasta lograr la disolución, siempre que las condiciones de la experiencia lo permitan.",
+      `Transferí la solución al ${volumetricFlaskText}.`,
       "Enjuagá el vaso de precipitados con pequeñas cantidades de solvente y agregá esos lavados al matraz.",
       "Agregá solvente hasta acercarte a la marca de volumen final.",
       "Ajustá cuidadosamente el menisco hasta la marca.",
@@ -114,9 +131,106 @@ function createSolidLiquidSolution(input: PreparationInput): PreparationPlan {
   };
 }
 
+function createSolidLiquidSuspension(input: PreparationInput): PreparationPlan {
+  const amountText =
+    input.finalAmount && input.finalUnit
+      ? formatAmount(input.finalAmount, input.finalUnit)
+      : null;
+
+  return {
+    title: "Preparación de una suspensión",
+    description:
+      "El sólido es prácticamente insoluble en el líquido. Las partículas quedan dispersas y pueden sedimentar con el tiempo.",
+    equipmentIds: [
+      "balance",
+      "spatula",
+      "weighing-container",
+      "beaker",
+      "glass-rod",
+      "graduated-cylinder",
+    ],
+    steps: [
+      "Reuní los materiales necesarios antes de comenzar.",
+      "Colocá el recipiente para pesada sobre la balanza.",
+      "Tará la balanza.",
+      "Pesá la cantidad de sólido indicada por el cálculo o por la experiencia.",
+      "Medí la cantidad de líquido requerida utilizando material adecuado.",
+      "Colocá una parte del líquido en un vaso de precipitados.",
+      "Agregá gradualmente el sólido mientras mezclás con una varilla de vidrio.",
+      "Continuá mezclando hasta distribuir las partículas de la forma más uniforme posible.",
+      "Observá el aspecto de la preparación y verificá si aparecen partículas visibles o sedimentación.",
+      amountText
+        ? `Prepará la cantidad indicada de ${amountText} siguiendo el método específico de la experiencia.`
+        : "Ajustá las cantidades según el método específico de la experiencia.",
+      "Transferí la suspensión al recipiente final adecuado.",
+      "Homogeneizá nuevamente antes de observar, utilizar o tomar una muestra.",
+      "Rotulá el recipiente indicando los componentes, concentración o proporción y fecha.",
+    ],
+    warnings: [
+      "Esta preparación es una suspensión, no una solución homogénea.",
+      "No debe indicarse “mezclar hasta disolver”, porque el sólido es prácticamente insoluble.",
+      "Las partículas pueden sedimentar y puede ser necesario homogeneizar antes de utilizar la preparación.",
+      "No se utiliza un matraz aforado como regla general para preparar suspensiones.",
+      ...(input.safetyLevel === "supervision"
+        ? ["Esta preparación requiere supervisión docente."]
+        : []),
+    ],
+    canShowAutonomousProcedure: true,
+  };
+}
+
+function createSolidLiquidDispersion(input: PreparationInput): PreparationPlan {
+  return {
+    title: "Preparación de una dispersión",
+    description:
+      "La sustancia presenta solubilidad limitada o comportamiento de dispersión. Puede quedar material sin disolver.",
+    equipmentIds: [
+      "balance",
+      "spatula",
+      "weighing-container",
+      "beaker",
+      "glass-rod",
+      "graduated-cylinder",
+    ],
+    steps: [
+      "Reuní los materiales necesarios.",
+      "Pesá o medí los componentes según las cantidades indicadas.",
+      "Colocá el líquido en un recipiente adecuado.",
+      "Agregá gradualmente el componente sólido mientras mezclás.",
+      "Homogeneizá la preparación.",
+      "Observá si queda material sin disolver o si aparecen partículas dispersas.",
+      "Transferí al recipiente final correspondiente.",
+      "Rotulá la preparación.",
+    ],
+    warnings: [
+      "No debe suponerse que todo el sólido se disolverá.",
+      "La preparación puede requerir agitación antes de utilizarse.",
+      ...(input.safetyLevel === "supervision"
+        ? ["Esta preparación requiere supervisión docente."]
+        : []),
+    ],
+    canShowAutonomousProcedure: true,
+  };
+}
+
+function createUnknownSolidLiquidPreparation(): PreparationPlan {
+  return {
+    title: "Preparación pendiente de clasificación",
+    description:
+      "QuimiLab necesita información sobre la solubilidad de la sustancia antes de decidir si corresponde una solución, suspensión u otro tipo de preparación.",
+    equipmentIds: [],
+    steps: [],
+    warnings: [
+      "No se generará un procedimiento hasta conocer el comportamiento de la sustancia en el líquido.",
+      "No debe suponerse que un sólido se disuelve solamente porque se mezcla con agua.",
+    ],
+    canShowAutonomousProcedure: false,
+  };
+}
+
 function createSolidSolidMixture(input: PreparationInput): PreparationPlan {
   return {
-    title: "Preparación de una mezcla sólido–sólido",
+    title: "Preparación de una mezcla sólido + sólido",
     description:
       "Procedimiento general para pesar y homogeneizar dos o más componentes sólidos.",
     equipmentIds: ["balance", "spatula", "weighing-container", "mortar-pestle"],
@@ -205,6 +319,18 @@ function createViscousPreparation(input: PreparationInput): PreparationPlan {
         : []),
     ],
     canShowAutonomousProcedure: true,
+  };
+}
+
+function createUnknownPreparation(): PreparationPlan {
+  return {
+    title: "Preparación no reconocida",
+    description:
+      "QuimiLab todavía no posee un procedimiento definido para este tipo de preparación.",
+    equipmentIds: [],
+    steps: [],
+    warnings: [],
+    canShowAutonomousProcedure: false,
   };
 }
 
