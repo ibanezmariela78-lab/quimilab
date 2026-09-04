@@ -1,7 +1,7 @@
 import type { SubstanceInfo } from "@/chemistry/types";
 
 const commonSubstances: Record<string, SubstanceInfo> = {
-  HCl: { name: "Ácido clorhídrico" },
+  HCl: { name: "Ácido clorhídrico", safetyClassification: "highPrecaution" },
   NaCl: { name: "Cloruro de sodio" },
   CaCl2: {
     name: "Cloruro de calcio",
@@ -10,8 +10,9 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     ],
     temperatureBehavior: "La disolución en agua es exotérmica.",
   },
-  H2SO4: { name: "Ácido sulfúrico" },
-  NaOH: { name: "Hidróxido de sodio" },
+  H2SO4: { name: "Ácido sulfúrico", safetyClassification: "highPrecaution" },
+  HNO3: { name: "Ácido nítrico", safetyClassification: "highPrecaution" },
+  NaOH: { name: "Hidróxido de sodio", safetyClassification: "highPrecaution" },
   "Ca(OH)2": { name: "Hidróxido de calcio" },
   "Al2(SO4)3": { name: "Sulfato de aluminio" },
 };

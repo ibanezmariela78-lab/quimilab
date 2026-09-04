@@ -270,6 +270,27 @@ export default function MolarMassScreen() {
                 Diluciones
               </ThemedText>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Preparar desde reactivo comercial"
+              onPress={() => router.push("/commercial-reagent")}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons name="flask-outline" size={18} color={colors.accent} />
+              <ThemedText
+                style={[styles.secondaryButtonText, { color: colors.accent }]}
+              >
+                Reactivo comercial
+              </ThemedText>
+            </Pressable>
           </View>
 
           <View

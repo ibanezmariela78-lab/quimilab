@@ -34,6 +34,10 @@ export default function RootLayout() {
         />
         <Stack.Screen name="formality" options={{ title: "Formalidad" }} />
         <Stack.Screen name="dilutions" options={{ title: "Diluciones" }} />
+        <Stack.Screen
+          name="commercial-reagent"
+          options={{ title: "Reactivo comercial" }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

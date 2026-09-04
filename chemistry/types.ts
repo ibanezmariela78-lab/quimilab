@@ -8,6 +8,10 @@ export type ParsedFormula = {
 export type ElementContribution = {
   symbol: string;
   name: string;
+  safetyClassification?:
+    | "educational"
+    | "requiresSupervision"
+    | "highPrecaution";
   spanishName: string;
   count: number;
   atomicWeight: number;
@@ -27,6 +31,10 @@ export type MolarMassCalculation = {
 
 export type SubstanceInfo = {
   name: string;
+  safetyClassification?:
+    | "educational"
+    | "requiresSupervision"
+    | "highPrecaution";
   physicalState?: "solid" | "liquid" | "viscousLiquid" | "semisolid";
   preparationType?:
     | "solution"
