@@ -39,7 +39,7 @@ export default function HomeScreen() {
       description:
         "Soluciones, mezclas, sólidos, líquidos y preparaciones guiadas paso a paso.",
       icon: "flask-outline" as const,
-      route: "/modal" as const,
+      route: "/preparacion-laboratorio" as const,
     },
     {
       title: "CALCULADORA QUÍMICA",
