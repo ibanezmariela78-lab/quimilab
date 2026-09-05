@@ -17,13 +17,16 @@ import {
 import { classifyMixture } from "../chemistry/classifyMixture";
 import { inferPreparationType } from "../chemistry/inferPreparationType";
 import { getInteractionWithWater } from "../chemistry/substanceInteractions";
+import { getSubstancePairInteraction } from "../chemistry/substancePairInteractions";
+
 import { findExactSubstance, SubstanceRecord } from "../chemistry/substances";
+
 import { labEquipment } from "../data/labEquipment";
 
 type PreparationObjective = "combineComponents" | "dilution";
 
 export default function PreparacionLaboratorioScreen() {
-  const [component1Input, setComponent1Input] = useState("CaCl2");
+  const [component1Input, setComponent1Input] = useState("C2H5OH");
 
   const [component2Input, setComponent2Input] = useState("H2O");
 
@@ -37,16 +40,28 @@ export default function PreparacionLaboratorioScreen() {
   const cantidadNumerica = Number(cantidadFinal.replace(",", "."));
 
   const component1 = useMemo(() => {
-    if (!component1Input.trim()) return null;
+    if (!component1Input.trim()) {
+      return null;
+    }
 
     return findExactSubstance(component1Input) ?? null;
   }, [component1Input]);
 
   const component2 = useMemo(() => {
-    if (!component2Input.trim()) return null;
+    if (!component2Input.trim()) {
+      return null;
+    }
 
     return findExactSubstance(component2Input) ?? null;
   }, [component2Input]);
+
+  const pairInteraction = useMemo(() => {
+    if (!component1 || !component2) {
+      return null;
+    }
+
+    return getSubstancePairInteraction(component1.formula, component2.formula);
+  }, [component1, component2]);
 
   const safetyLevel = useMemo<SafetyLevel>(() => {
     const levels = [
@@ -70,8 +85,9 @@ export default function PreparacionLaboratorioScreen() {
       substance: component1,
       secondSubstance: component2,
       isDilution: objective === "dilution",
+      pairInteraction: pairInteraction?.interaction ?? null,
     });
-  }, [component1, component2, objective]);
+  }, [component1, component2, objective, pairInteraction]);
 
   const waterBasedInteraction = useMemo(() => {
     if (!component1 || !component2) {
@@ -130,6 +146,22 @@ export default function PreparacionLaboratorioScreen() {
     });
   }, [component1, component2, waterBasedInteraction]);
 
+  const liquidLiquidBehavior = useMemo(() => {
+    if (!pairInteraction) {
+      return "unknown" as const;
+    }
+
+    if (pairInteraction.interaction === "miscible") {
+      return "miscible" as const;
+    }
+
+    if (pairInteraction.interaction === "immiscible") {
+      return "immiscible" as const;
+    }
+
+    return "unknown" as const;
+  }, [pairInteraction]);
+
   const plan = useMemo(() => {
     if (!automaticPreparation.type) {
       return null;
@@ -138,6 +170,13 @@ export default function PreparacionLaboratorioScreen() {
     if (
       automaticPreparation.type === "solidLiquidSolution" &&
       !mixtureAnalysis
+    ) {
+      return null;
+    }
+
+    if (
+      automaticPreparation.type === "liquidLiquidMixture" &&
+      liquidLiquidBehavior === "unknown"
     ) {
       return null;
     }
@@ -158,6 +197,11 @@ export default function PreparacionLaboratorioScreen() {
         automaticPreparation.type === "solidLiquidSolution"
           ? mixtureAnalysis?.type
           : undefined,
+
+      liquidLiquidBehavior:
+        automaticPreparation.type === "liquidLiquidMixture"
+          ? liquidLiquidBehavior
+          : undefined,
     });
   }, [
     automaticPreparation,
@@ -165,6 +209,7 @@ export default function PreparacionLaboratorioScreen() {
     unidadFinal,
     safetyLevel,
     mixtureAnalysis,
+    liquidLiquidBehavior,
   ]);
 
   const materiales = plan
@@ -174,6 +219,10 @@ export default function PreparacionLaboratorioScreen() {
           (item): item is (typeof labEquipment)[number] => item !== undefined,
         )
     : [];
+
+  const isLiquidLiquid =
+    component1?.physicalState === "liquid" &&
+    component2?.physicalState === "liquid";
 
   return (
     <>
@@ -191,8 +240,9 @@ export default function PreparacionLaboratorioScreen() {
         <Text style={styles.title}>Preparación de laboratorio</Text>
 
         <Text style={styles.subtitle}>
-          Ingresá los componentes de la preparación. QuimiLab identificará sus
-          estados físicos y analizará qué tipo de preparación corresponde.
+          Ingresá los componentes. QuimiLab identifica sus estados físicos,
+          analiza su interacción y determina automáticamente el tipo de
+          preparación.
         </Text>
 
         <SubstanceInputCard
@@ -230,8 +280,8 @@ export default function PreparacionLaboratorioScreen() {
             </Text>
 
             <Text style={styles.objectiveDescription}>
-              QuimiLab analizará los estados físicos y, cuando existan datos
-              suficientes, la solubilidad o miscibilidad.
+              QuimiLab analizará los estados físicos, la solubilidad o la
+              miscibilidad cuando existan datos suficientes.
             </Text>
           </Pressable>
 
@@ -297,7 +347,41 @@ export default function PreparacionLaboratorioScreen() {
               {component1.name} + {component2.name}
             </Text>
 
-            {waterBasedInteraction ? (
+            {isLiquidLiquid ? (
+              pairInteraction ? (
+                <>
+                  <Text style={styles.analysisResult}>
+                    Resultado: {pairInteraction.resultLabel}
+                  </Text>
+
+                  <Text style={styles.analysisText}>
+                    {pairInteraction.description}
+                  </Text>
+
+                  {pairInteraction.warning && (
+                    <View style={styles.warningInside}>
+                      <Text style={styles.warningTitle}>Seguridad</Text>
+
+                      <Text style={styles.warningText}>
+                        {pairInteraction.warning}
+                      </Text>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <View style={styles.pendingAnalysis}>
+                  <Text style={styles.pendingAnalysisTitle}>
+                    Miscibilidad no registrada
+                  </Text>
+
+                  <Text style={styles.pendingAnalysisText}>
+                    QuimiLab reconoce que ambos componentes son líquidos, pero
+                    todavía no dispone de información específica sobre su
+                    interacción. No se asumirá que son miscibles o inmiscibles.
+                  </Text>
+                </View>
+              )
+            ) : waterBasedInteraction ? (
               <>
                 <Text style={styles.analysisText}>
                   {waterBasedInteraction.description}
@@ -351,11 +435,6 @@ export default function PreparacionLaboratorioScreen() {
                     </View>
                   )}
               </>
-            ) : component1.formula === "H2O" && component2.formula === "H2O" ? (
-              <Text style={styles.analysisText}>
-                Ambos componentes corresponden a agua. No se trata de una mezcla
-                de sustancias diferentes.
-              </Text>
             ) : (
               <View style={styles.pendingAnalysis}>
                 <Text style={styles.pendingAnalysisTitle}>
@@ -365,8 +444,7 @@ export default function PreparacionLaboratorioScreen() {
                 <Text style={styles.pendingAnalysisText}>
                   QuimiLab conoce ambas sustancias y sus estados físicos, pero
                   todavía no posee datos suficientes sobre la interacción
-                  específica entre estos dos componentes. No se asumirá que son
-                  solubles, miscibles o inmiscibles.
+                  específica entre estos dos componentes.
                 </Text>
               </View>
             )}
@@ -472,9 +550,9 @@ export default function PreparacionLaboratorioScreen() {
             <Text style={styles.pendingTitle}>Procedimiento pendiente</Text>
 
             <Text style={styles.pendingText}>
-              QuimiLab todavía necesita información suficiente sobre los
-              componentes o su interacción antes de seleccionar materiales y
-              generar un procedimiento.
+              QuimiLab necesita información suficiente sobre la interacción
+              entre los componentes antes de seleccionar materiales y generar un
+              procedimiento.
             </Text>
           </View>
         )}
@@ -483,15 +561,14 @@ export default function PreparacionLaboratorioScreen() {
           <Text style={styles.infoTitle}>¿Cómo decide QuimiLab?</Text>
 
           <Text style={styles.infoText}>
-            QuimiLab identifica cada componente de forma independiente y
-            consulta su estado físico, solubilidad, comportamiento térmico y
-            nivel de seguridad.
+            QuimiLab identifica cada componente, compara sus estados físicos y
+            consulta la información disponible sobre solubilidad o miscibilidad.
           </Text>
 
           <Text style={styles.infoText}>
-            Cuando no existen datos suficientes sobre la interacción entre dos
-            sustancias, la aplicación no inventa un resultado y solicita más
-            información.
+            Si dos líquidos son miscibles, puede reconocer una mezcla líquida
+            homogénea. Si fueran inmiscibles, los clasificaría como mezcla
+            líquida heterogénea y no como emulsión automáticamente.
           </Text>
         </View>
       </ScrollView>

@@ -4,9 +4,12 @@ export type PreparationType =
   | "solidLiquidSolution"
   | "solidSolidMixture"
   | "liquidDilution"
-  | "viscousPreparation";
+  | "viscousPreparation"
+  | "liquidLiquidMixture";
 
 export type SafetyLevel = "educational" | "supervision" | "highPrecaution";
+
+export type LiquidLiquidBehavior = "miscible" | "immiscible" | "unknown";
 
 export type PreparationInput = {
   type: PreparationType;
@@ -14,6 +17,7 @@ export type PreparationInput = {
   finalUnit?: "mL" | "L" | "g" | "kg";
   safetyLevel?: SafetyLevel;
   mixtureType?: MixtureType;
+  liquidLiquidBehavior?: LiquidLiquidBehavior;
 };
 
 export type PreparationPlan = {
@@ -34,12 +38,12 @@ export function createLabPreparationPlan(
     return {
       title: "Preparación con precauciones especiales",
       description:
-        "El cálculo puede consultarse, pero esta preparación requiere condiciones especiales de laboratorio.",
+        "QuimiLab puede analizar teóricamente la preparación, pero no mostrará un procedimiento autónomo porque al menos una de las sustancias requiere precauciones especiales.",
       equipmentIds: [],
       steps: [],
       warnings: [
         "Esta preparación no debe realizarse de forma autónoma por estudiantes.",
-        "Requiere supervisión docente, elementos de protección y evaluación previa de riesgos.",
+        "Requiere supervisión docente, elementos de protección adecuados y evaluación previa de riesgos.",
       ],
       canShowAutonomousProcedure: false,
     };
@@ -57,6 +61,9 @@ export function createLabPreparationPlan(
 
     case "viscousPreparation":
       return createViscousPreparation(input);
+
+    case "liquidLiquidMixture":
+      return createLiquidLiquidPreparation(input);
 
     default:
       return createUnknownPreparation();
@@ -222,7 +229,7 @@ function createUnknownSolidLiquidPreparation(): PreparationPlan {
     steps: [],
     warnings: [
       "No se generará un procedimiento hasta conocer el comportamiento de la sustancia en el líquido.",
-      "No debe suponerse que un sólido se disuelve solamente porque se mezcla con agua.",
+      "No debe suponerse que un sólido se disuelve solamente porque se mezcla con un líquido.",
     ],
     canShowAutonomousProcedure: false,
   };
@@ -319,6 +326,91 @@ function createViscousPreparation(input: PreparationInput): PreparationPlan {
         : []),
     ],
     canShowAutonomousProcedure: true,
+  };
+}
+
+function createLiquidLiquidPreparation(
+  input: PreparationInput,
+): PreparationPlan {
+  switch (input.liquidLiquidBehavior) {
+    case "miscible":
+      return createMiscibleLiquidMixture(input);
+
+    case "immiscible":
+      return createImmiscibleLiquidMixture(input);
+
+    default:
+      return createUnknownLiquidMixture();
+  }
+}
+
+function createMiscibleLiquidMixture(input: PreparationInput): PreparationPlan {
+  return {
+    title: "Preparación de una mezcla líquida homogénea",
+    description:
+      "Los líquidos son miscibles entre sí y pueden formar una sola fase líquida homogénea.",
+    equipmentIds: ["graduated-cylinder", "beaker", "glass-rod"],
+    steps: [
+      "Reuní los materiales necesarios.",
+      "Medí cada componente líquido utilizando material adecuado para la precisión requerida.",
+      "Transferí los componentes a un vaso de precipitados limpio.",
+      "Mezclá suavemente con una varilla de vidrio hasta obtener una distribución uniforme.",
+      "Observá la preparación y verificá que se mantenga una única fase líquida.",
+      "Transferí la mezcla al recipiente final adecuado.",
+      "Rotulá indicando componentes, proporciones y fecha.",
+    ],
+    warnings: [
+      "Que dos líquidos sean miscibles no significa que sus volúmenes deban considerarse perfectamente aditivos.",
+      "Si se necesita un volumen final exacto, deberá utilizarse el procedimiento volumétrico específico correspondiente.",
+      ...(input.safetyLevel === "supervision"
+        ? ["Esta preparación requiere supervisión docente."]
+        : []),
+    ],
+    canShowAutonomousProcedure: true,
+  };
+}
+
+function createImmiscibleLiquidMixture(
+  input: PreparationInput,
+): PreparationPlan {
+  return {
+    title: "Preparación de una mezcla líquida heterogénea",
+    description:
+      "Los líquidos son inmiscibles y tienden a formar fases separadas.",
+    equipmentIds: ["graduated-cylinder", "beaker", "glass-rod"],
+    steps: [
+      "Reuní los materiales necesarios.",
+      "Medí cada componente líquido por separado.",
+      "Transferí ambos líquidos a un recipiente adecuado.",
+      "Mezclá suavemente si la experiencia requiere observar su comportamiento.",
+      "Observá la formación y separación de fases.",
+      "Registrá las características visibles de la mezcla.",
+      "Rotulá el recipiente indicando los componentes y la fecha.",
+    ],
+    warnings: [
+      "Esta preparación es una mezcla líquida heterogénea.",
+      "No debe describirse automáticamente como una emulsión.",
+      "Una emulsión requiere una dispersión de un líquido en otro y condiciones específicas de formación o estabilización.",
+      ...(input.safetyLevel === "supervision"
+        ? ["Esta preparación requiere supervisión docente."]
+        : []),
+    ],
+    canShowAutonomousProcedure: true,
+  };
+}
+
+function createUnknownLiquidMixture(): PreparationPlan {
+  return {
+    title: "Interacción entre líquidos no determinada",
+    description:
+      "QuimiLab reconoce que ambos componentes son líquidos, pero necesita conocer su miscibilidad antes de generar un procedimiento.",
+    equipmentIds: [],
+    steps: [],
+    warnings: [
+      "No se asumirá que dos líquidos son miscibles solamente porque pueden mezclarse físicamente.",
+      "QuimiLab necesita información específica sobre la interacción entre ambos componentes.",
+    ],
+    canShowAutonomousProcedure: false,
   };
 }
 

@@ -1,10 +1,12 @@
+import type { PairInteraction } from "./substancePairInteractions";
 import type { SubstanceInfo } from "./types";
 
 export type PreparationType =
   | "solidLiquidSolution"
   | "solidSolidMixture"
   | "liquidDilution"
-  | "viscousPreparation";
+  | "viscousPreparation"
+  | "liquidLiquidMixture";
 
 export type AutomaticPreparationResult = {
   type: PreparationType | null;
@@ -23,10 +25,8 @@ type InferPreparationInput = {
 
   isDilution?: boolean;
 
-  /*
-   * Se mantiene temporalmente para que la pantalla actual
-   * siga funcionando mientras migramos a dos sustancias.
-   */
+  pairInteraction?: PairInteraction | null;
+
   secondComponentState?:
     | "solid"
     | "liquid"
@@ -43,6 +43,7 @@ export function inferPreparationType(
     substance,
     secondSubstance = null,
     isDilution = false,
+    pairInteraction = null,
     secondComponentState = null,
   } = input;
 
@@ -149,11 +150,50 @@ export function inferPreparationType(
   }
 
   if (component1State === "liquid" && component2State === "liquid") {
+    if (pairInteraction === "miscible") {
+      return {
+        type: "liquidLiquidMixture",
+        title: "Líquido + líquido",
+        explanation:
+          "QuimiLab detectó dos líquidos y encontró información que indica que son miscibles entre sí.",
+        detectedAutomatically: true,
+        needsMoreData: false,
+        component1State,
+        component2State,
+      };
+    }
+
+    if (pairInteraction === "immiscible") {
+      return {
+        type: "liquidLiquidMixture",
+        title: "Líquido + líquido",
+        explanation:
+          "QuimiLab detectó dos líquidos y encontró información que indica que son inmiscibles entre sí.",
+        detectedAutomatically: true,
+        needsMoreData: false,
+        component1State,
+        component2State,
+      };
+    }
+
+    if (pairInteraction === "reactive") {
+      return {
+        type: "liquidLiquidMixture",
+        title: "Líquido + líquido con posible reacción",
+        explanation:
+          "QuimiLab detectó que la interacción entre estos líquidos no debe tratarse como una simple mezcla.",
+        detectedAutomatically: true,
+        needsMoreData: true,
+        component1State,
+        component2State,
+      };
+    }
+
     return {
-      type: null,
+      type: "liquidLiquidMixture",
       title: "Líquido + líquido",
       explanation:
-        "QuimiLab detectó dos líquidos. Ahora debe analizar su miscibilidad y el objetivo de la experiencia para decidir si corresponde una mezcla homogénea, una mezcla heterogénea o una dilución.",
+        "QuimiLab detectó dos líquidos, pero todavía no posee información suficiente sobre su miscibilidad.",
       detectedAutomatically: true,
       needsMoreData: true,
       component1State,
