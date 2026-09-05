@@ -12,10 +12,12 @@ import {
 import {
     createLabPreparationPlan,
     PreparationType,
+    SafetyLevel,
 } from "../chemistry/labPreparation";
 
 import { classifyMixture } from "../chemistry/classifyMixture";
 import { getInteractionWithWater } from "../chemistry/substanceInteractions";
+import { findExactSubstance } from "../chemistry/substances";
 import { labEquipment } from "../data/labEquipment";
 
 type PreparationOption = {
@@ -62,6 +64,14 @@ export default function PreparacionLaboratorioScreen() {
 
   const cantidadNumerica = Number(cantidadFinal.replace(",", "."));
 
+  const substanceData = useMemo(() => {
+    if (!formula.trim()) {
+      return null;
+    }
+
+    return findExactSubstance(formula) ?? null;
+  }, [formula]);
+
   const interactionData = useMemo(() => {
     if (!formula.trim()) {
       return null;
@@ -69,6 +79,19 @@ export default function PreparacionLaboratorioScreen() {
 
     return getInteractionWithWater(formula);
   }, [formula]);
+
+  const safetyLevel = useMemo<SafetyLevel>(() => {
+    switch (substanceData?.safetyClassification) {
+      case "requiresSupervision":
+        return "supervision";
+
+      case "highPrecaution":
+        return "highPrecaution";
+
+      default:
+        return "educational";
+    }
+  }, [substanceData]);
 
   const mixtureAnalysis = useMemo(() => {
     if (tipo !== "solidLiquidSolution") {
@@ -101,12 +124,12 @@ export default function PreparacionLaboratorioScreen() {
 
       finalUnit: unidadFinal,
 
-      safetyLevel: "educational",
+      safetyLevel,
 
       mixtureType:
         tipo === "solidLiquidSolution" ? mixtureAnalysis?.type : undefined,
     });
-  }, [tipo, cantidadNumerica, unidadFinal, mixtureAnalysis]);
+  }, [tipo, cantidadNumerica, unidadFinal, safetyLevel, mixtureAnalysis]);
 
   const materiales = plan.equipmentIds
     .map((id) => labEquipment.find((item) => item.id === id))
@@ -130,8 +153,8 @@ export default function PreparacionLaboratorioScreen() {
         <Text style={styles.title}>Preparación de laboratorio</Text>
 
         <Text style={styles.subtitle}>
-          QuimiLab analiza la sustancia, identifica el tipo de preparación y
-          selecciona materiales y procedimiento.
+          QuimiLab analiza la sustancia, identifica su comportamiento y
+          selecciona materiales, procedimiento y nivel de seguridad.
         </Text>
 
         <View style={styles.inputCard}>
@@ -146,10 +169,36 @@ export default function PreparacionLaboratorioScreen() {
           />
 
           <Text style={styles.helperText}>
-            QuimiLab utilizará esta información para consultar el comportamiento
-            de la sustancia.
+            Podés escribir una fórmula química o el nombre de una sustancia
+            registrada en QuimiLab.
           </Text>
         </View>
+
+        {substanceData && (
+          <View style={styles.substanceCard}>
+            <Text style={styles.substanceLabel}>SUSTANCIA IDENTIFICADA</Text>
+
+            <Text style={styles.substanceName}>{substanceData.name}</Text>
+
+            <Text style={styles.substanceFormula}>{substanceData.formula}</Text>
+
+            <View style={styles.dataRow}>
+              <Text style={styles.dataTitle}>Estado físico:</Text>
+
+              <Text style={styles.dataText}>
+                {getPhysicalStateLabel(substanceData.physicalState)}
+              </Text>
+            </View>
+
+            <View style={styles.dataRow}>
+              <Text style={styles.dataTitle}>Nivel de seguridad:</Text>
+
+              <Text style={styles.dataText}>
+                {getSafetyLabel(substanceData.safetyClassification)}
+              </Text>
+            </View>
+          </View>
+        )}
 
         <Text style={styles.sectionTitle}>Tipo de preparación</Text>
 
@@ -214,7 +263,7 @@ export default function PreparacionLaboratorioScreen() {
             <Text style={styles.analysisLabel}>ANÁLISIS QUÍMICO</Text>
 
             <Text style={styles.analysisTitle}>
-              {formula.trim() || "Sin sustancia"}
+              {substanceData?.name ?? formula.trim() ?? "Sin sustancia"}
             </Text>
 
             {interactionData ? (
@@ -273,8 +322,8 @@ export default function PreparacionLaboratorioScreen() {
               </>
             ) : (
               <Text style={styles.analysisText}>
-                QuimiLab todavía no tiene cargada información específica sobre
-                el comportamiento de esta sustancia en agua. No se asumirá que
+                QuimiLab todavía no posee información suficiente sobre el
+                comportamiento de esta sustancia en agua. No se asumirá que
                 forma una solución.
               </Text>
             )}
@@ -341,20 +390,72 @@ export default function PreparacionLaboratorioScreen() {
           <Text style={styles.infoTitle}>¿Cómo decide QuimiLab?</Text>
 
           <Text style={styles.infoText}>
-            QuimiLab selecciona los materiales y el procedimiento considerando
-            el estado físico, el tipo de preparación, el comportamiento de la
-            sustancia y la precisión requerida.
+            QuimiLab consulta una única base de sustancias y considera el estado
+            físico, la solubilidad, el comportamiento térmico, el tipo de
+            preparación y el nivel de seguridad.
           </Text>
 
           <Text style={styles.infoText}>
-            Si la sustancia no puede formar una solución, QuimiLab modifica
-            automáticamente el procedimiento para evitar instrucciones
-            incorrectas.
+            Si una sustancia requiere supervisión o precauciones especiales, el
+            procedimiento se adapta automáticamente.
           </Text>
         </View>
       </ScrollView>
     </>
   );
+}
+
+function getPhysicalStateLabel(
+  state:
+    | "solid"
+    | "liquid"
+    | "viscousLiquid"
+    | "semisolid"
+    | "gas"
+    | null
+    | undefined,
+): string {
+  switch (state) {
+    case "solid":
+      return "Sólido";
+
+    case "liquid":
+      return "Líquido";
+
+    case "viscousLiquid":
+      return "Líquido viscoso";
+
+    case "semisolid":
+      return "Semisólido";
+
+    case "gas":
+      return "Gas";
+
+    default:
+      return "No especificado";
+  }
+}
+
+function getSafetyLabel(
+  classification:
+    | "educational"
+    | "requiresSupervision"
+    | "highPrecaution"
+    | undefined,
+): string {
+  switch (classification) {
+    case "requiresSupervision":
+      return "Requiere supervisión docente";
+
+    case "highPrecaution":
+      return "Precaución alta";
+
+    case "educational":
+      return "Uso educativo";
+
+    default:
+      return "No especificado";
+  }
 }
 
 const styles = StyleSheet.create({
@@ -421,6 +522,53 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     marginTop: 8,
+  },
+
+  substanceCard: {
+    backgroundColor: "#eaf7f5",
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#b9ddd8",
+    marginBottom: 25,
+  },
+
+  substanceLabel: {
+    color: "#0d887d",
+    fontWeight: "800",
+    fontSize: 13,
+    marginBottom: 6,
+  },
+
+  substanceName: {
+    color: "#173b40",
+    fontWeight: "800",
+    fontSize: 24,
+  },
+
+  substanceFormula: {
+    color: "#617a7b",
+    fontSize: 17,
+    marginTop: 3,
+    marginBottom: 14,
+  },
+
+  dataRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 7,
+  },
+
+  dataTitle: {
+    color: "#173b40",
+    fontWeight: "800",
+    fontSize: 15,
+    marginRight: 5,
+  },
+
+  dataText: {
+    color: "#4f696b",
+    fontSize: 15,
   },
 
   optionCard: {
