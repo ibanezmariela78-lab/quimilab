@@ -17,16 +17,18 @@ import {
 import { classifyMixture } from "../chemistry/classifyMixture";
 import { inferPreparationType } from "../chemistry/inferPreparationType";
 import { getInteractionWithWater } from "../chemistry/substanceInteractions";
-import { findExactSubstance } from "../chemistry/substances";
+import { findExactSubstance, SubstanceRecord } from "../chemistry/substances";
 import { labEquipment } from "../data/labEquipment";
 
-type PreparationObjective = "prepareWithWater" | "dilution";
+type PreparationObjective = "combineComponents" | "dilution";
 
 export default function PreparacionLaboratorioScreen() {
-  const [formula, setFormula] = useState("CaCl2");
+  const [component1Input, setComponent1Input] = useState("CaCl2");
+
+  const [component2Input, setComponent2Input] = useState("H2O");
 
   const [objective, setObjective] =
-    useState<PreparationObjective>("prepareWithWater");
+    useState<PreparationObjective>("combineComponents");
 
   const [cantidadFinal, setCantidadFinal] = useState("500");
 
@@ -34,65 +36,109 @@ export default function PreparacionLaboratorioScreen() {
 
   const cantidadNumerica = Number(cantidadFinal.replace(",", "."));
 
-  const substanceData = useMemo(() => {
-    if (!formula.trim()) {
-      return null;
-    }
+  const component1 = useMemo(() => {
+    if (!component1Input.trim()) return null;
 
-    return findExactSubstance(formula) ?? null;
-  }, [formula]);
+    return findExactSubstance(component1Input) ?? null;
+  }, [component1Input]);
 
-  const interactionData = useMemo(() => {
-    if (!formula.trim()) {
-      return null;
-    }
+  const component2 = useMemo(() => {
+    if (!component2Input.trim()) return null;
 
-    return getInteractionWithWater(formula);
-  }, [formula]);
+    return findExactSubstance(component2Input) ?? null;
+  }, [component2Input]);
 
   const safetyLevel = useMemo<SafetyLevel>(() => {
-    switch (substanceData?.safetyClassification) {
-      case "requiresSupervision":
-        return "supervision";
+    const levels = [
+      component1?.safetyClassification,
+      component2?.safetyClassification,
+    ];
 
-      case "highPrecaution":
-        return "highPrecaution";
-
-      default:
-        return "educational";
+    if (levels.includes("highPrecaution")) {
+      return "highPrecaution";
     }
-  }, [substanceData]);
+
+    if (levels.includes("requiresSupervision")) {
+      return "supervision";
+    }
+
+    return "educational";
+  }, [component1, component2]);
 
   const automaticPreparation = useMemo(() => {
     return inferPreparationType({
-      substance: substanceData,
+      substance: component1,
+      secondSubstance: component2,
       isDilution: objective === "dilution",
-      secondComponentState: "liquid",
     });
-  }, [substanceData, objective]);
+  }, [component1, component2, objective]);
 
-  const mixtureAnalysis = useMemo(() => {
-    if (automaticPreparation.type !== "solidLiquidSolution") {
+  const waterBasedInteraction = useMemo(() => {
+    if (!component1 || !component2) {
       return null;
     }
 
-    if (!interactionData) {
-      return classifyMixture({
-        component1State: "solid",
-        component2State: "liquid",
-        interaction: "unknown",
-      });
+    const component1IsWater = component1.formula === "H2O";
+
+    const component2IsWater = component2.formula === "H2O";
+
+    if (component1IsWater && !component2IsWater) {
+      return getInteractionWithWater(component2.formula);
+    }
+
+    if (component2IsWater && !component1IsWater) {
+      return getInteractionWithWater(component1.formula);
+    }
+
+    return null;
+  }, [component1, component2]);
+
+  const mixtureAnalysis = useMemo(() => {
+    if (!component1 || !component2) {
+      return null;
+    }
+
+    if (!waterBasedInteraction) {
+      return null;
+    }
+
+    const state1 = component1.physicalState;
+    const state2 = component2.physicalState;
+
+    if (
+      state1 !== "solid" &&
+      state1 !== "liquid" &&
+      state1 !== "viscousLiquid" &&
+      state1 !== "semisolid"
+    ) {
+      return null;
+    }
+
+    if (
+      state2 !== "solid" &&
+      state2 !== "liquid" &&
+      state2 !== "viscousLiquid" &&
+      state2 !== "semisolid"
+    ) {
+      return null;
     }
 
     return classifyMixture({
-      component1State: "solid",
-      component2State: "liquid",
-      interaction: interactionData.interaction,
+      component1State: state1,
+      component2State: state2,
+      interaction: waterBasedInteraction.interaction,
     });
-  }, [automaticPreparation, interactionData]);
+  }, [component1, component2, waterBasedInteraction]);
 
   const plan = useMemo(() => {
     if (!automaticPreparation.type) {
+      return null;
+    }
+
+    if (
+      automaticPreparation.type === "solidLiquidSolution" &&
+      !mixtureAnalysis
+    ) {
       return null;
     }
 
@@ -145,88 +191,47 @@ export default function PreparacionLaboratorioScreen() {
         <Text style={styles.title}>Preparación de laboratorio</Text>
 
         <Text style={styles.subtitle}>
-          Ingresá la sustancia y el objetivo de la experiencia. QuimiLab
-          determinará automáticamente el tipo de preparación.
+          Ingresá los componentes de la preparación. QuimiLab identificará sus
+          estados físicos y analizará qué tipo de preparación corresponde.
         </Text>
 
-        <View style={styles.inputCard}>
-          <Text style={styles.label}>Sustancia</Text>
+        <SubstanceInputCard
+          title="Componente 1"
+          value={component1Input}
+          onChangeText={setComponent1Input}
+          substance={component1}
+        />
 
-          <TextInput
-            value={formula}
-            onChangeText={setFormula}
-            style={styles.input}
-            placeholder="Ejemplo: CaCl2 o Talco"
-            autoCapitalize="none"
-          />
-
-          <Text style={styles.helperText}>
-            Podés escribir la fórmula química o el nombre de una sustancia
-            registrada.
-          </Text>
-        </View>
-
-        {substanceData ? (
-          <View style={styles.substanceCard}>
-            <Text style={styles.substanceLabel}>SUSTANCIA IDENTIFICADA</Text>
-
-            <Text style={styles.substanceName}>{substanceData.name}</Text>
-
-            <Text style={styles.substanceFormula}>{substanceData.formula}</Text>
-
-            <View style={styles.dataRow}>
-              <Text style={styles.dataTitle}>Estado físico:</Text>
-
-              <Text style={styles.dataText}>
-                {getPhysicalStateLabel(substanceData.physicalState)}
-              </Text>
-            </View>
-
-            <View style={styles.dataRow}>
-              <Text style={styles.dataTitle}>Nivel de seguridad:</Text>
-
-              <Text style={styles.dataText}>
-                {getSafetyLabel(substanceData.safetyClassification)}
-              </Text>
-            </View>
-          </View>
-        ) : (
-          formula.trim() !== "" && (
-            <View style={styles.warningCard}>
-              <Text style={styles.warningTitle}>Sustancia no encontrada</Text>
-
-              <Text style={styles.warningText}>
-                QuimiLab todavía no posee información suficiente sobre esta
-                sustancia. No se generará un procedimiento suponiendo
-                propiedades desconocidas.
-              </Text>
-            </View>
-          )
-        )}
+        <SubstanceInputCard
+          title="Componente 2"
+          value={component2Input}
+          onChangeText={setComponent2Input}
+          substance={component2}
+        />
 
         <View style={styles.inputCard}>
-          <Text style={styles.sectionTitle}>¿Qué querés preparar?</Text>
+          <Text style={styles.sectionTitle}>Objetivo de la preparación</Text>
 
           <Pressable
             style={[
               styles.objectiveCard,
-              objective === "prepareWithWater" && styles.objectiveCardActive,
+              objective === "combineComponents" && styles.objectiveCardActive,
             ]}
-            onPress={() => setObjective("prepareWithWater")}
+            onPress={() => setObjective("combineComponents")}
           >
             <Text
               style={[
                 styles.objectiveTitle,
-                objective === "prepareWithWater" && styles.objectiveTitleActive,
+                objective === "combineComponents" &&
+                  styles.objectiveTitleActive,
               ]}
             >
-              Preparación con agua
+              Combinar los componentes
             </Text>
 
             <Text style={styles.objectiveDescription}>
-              QuimiLab analizará el estado físico y la solubilidad para
-              determinar si corresponde una solución, suspensión, dispersión u
-              otro tipo de preparación.
+              QuimiLab analizará los estados físicos y, cuando existan datos
+              suficientes, la solubilidad o miscibilidad.
             </Text>
           </Pressable>
 
@@ -247,8 +252,8 @@ export default function PreparacionLaboratorioScreen() {
             </Text>
 
             <Text style={styles.objectiveDescription}>
-              QuimiLab preparará una solución menos concentrada a partir de una
-              solución de concentración conocida.
+              Preparar una solución menos concentrada a partir de una solución
+              madre.
             </Text>
           </Pressable>
         </View>
@@ -281,6 +286,92 @@ export default function PreparacionLaboratorioScreen() {
             </View>
           )}
         </View>
+
+        {component1 && component2 && objective === "combineComponents" && (
+          <View style={styles.analysisCard}>
+            <Text style={styles.analysisLabel}>
+              ANÁLISIS DE LOS COMPONENTES
+            </Text>
+
+            <Text style={styles.analysisTitle}>
+              {component1.name} + {component2.name}
+            </Text>
+
+            {waterBasedInteraction ? (
+              <>
+                <Text style={styles.analysisText}>
+                  {waterBasedInteraction.description}
+                </Text>
+
+                {mixtureAnalysis && (
+                  <>
+                    <Text style={styles.analysisResult}>
+                      Resultado: {mixtureAnalysis.label}
+                    </Text>
+
+                    <Text style={styles.analysisText}>
+                      {mixtureAnalysis.explanation}
+                    </Text>
+                  </>
+                )}
+
+                {waterBasedInteraction.thermalBehavior === "exothermic" && (
+                  <View style={styles.warningInside}>
+                    <Text style={styles.warningTitle}>
+                      Comportamiento térmico
+                    </Text>
+
+                    <Text style={styles.warningText}>
+                      {waterBasedInteraction.warning ??
+                        "La preparación puede liberar calor."}
+                    </Text>
+                  </View>
+                )}
+
+                {waterBasedInteraction.thermalBehavior === "endothermic" && (
+                  <View style={styles.infoInside}>
+                    <Text style={styles.infoTitle}>Comportamiento térmico</Text>
+
+                    <Text style={styles.infoText}>
+                      La disolución puede absorber calor y disminuir la
+                      temperatura de la preparación.
+                    </Text>
+                  </View>
+                )}
+
+                {waterBasedInteraction.thermalBehavior !== "exothermic" &&
+                  waterBasedInteraction.thermalBehavior !== "endothermic" &&
+                  waterBasedInteraction.warning && (
+                    <View style={styles.infoInside}>
+                      <Text style={styles.infoTitle}>Observación</Text>
+
+                      <Text style={styles.infoText}>
+                        {waterBasedInteraction.warning}
+                      </Text>
+                    </View>
+                  )}
+              </>
+            ) : component1.formula === "H2O" && component2.formula === "H2O" ? (
+              <Text style={styles.analysisText}>
+                Ambos componentes corresponden a agua. No se trata de una mezcla
+                de sustancias diferentes.
+              </Text>
+            ) : (
+              <View style={styles.pendingAnalysis}>
+                <Text style={styles.pendingAnalysisTitle}>
+                  Interacción todavía no registrada
+                </Text>
+
+                <Text style={styles.pendingAnalysisText}>
+                  QuimiLab conoce ambas sustancias y sus estados físicos, pero
+                  todavía no posee datos suficientes sobre la interacción
+                  específica entre estos dos componentes. No se asumirá que son
+                  solubles, miscibles o inmiscibles.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.inputCard}>
           <Text style={styles.label}>Cantidad o volumen final</Text>
@@ -317,77 +408,6 @@ export default function PreparacionLaboratorioScreen() {
             ))}
           </View>
         </View>
-
-        {automaticPreparation.type === "solidLiquidSolution" && (
-          <View style={styles.analysisCard}>
-            <Text style={styles.analysisLabel}>ANÁLISIS QUÍMICO</Text>
-
-            <Text style={styles.analysisTitle}>
-              {substanceData?.name || formula.trim() || "Sin sustancia"}
-            </Text>
-
-            {interactionData ? (
-              <>
-                <Text style={styles.analysisText}>
-                  {interactionData.description}
-                </Text>
-
-                {mixtureAnalysis && (
-                  <>
-                    <Text style={styles.analysisResult}>
-                      Resultado: {mixtureAnalysis.label}
-                    </Text>
-
-                    <Text style={styles.analysisText}>
-                      {mixtureAnalysis.explanation}
-                    </Text>
-                  </>
-                )}
-
-                {interactionData.thermalBehavior === "exothermic" && (
-                  <View style={styles.warningInside}>
-                    <Text style={styles.warningTitle}>
-                      Comportamiento térmico
-                    </Text>
-
-                    <Text style={styles.warningText}>
-                      {interactionData.warning ??
-                        "La disolución puede liberar calor y aumentar la temperatura."}
-                    </Text>
-                  </View>
-                )}
-
-                {interactionData.thermalBehavior === "endothermic" && (
-                  <View style={styles.infoInside}>
-                    <Text style={styles.infoTitle}>Comportamiento térmico</Text>
-
-                    <Text style={styles.infoText}>
-                      La disolución puede absorber calor y producir una
-                      disminución de temperatura.
-                    </Text>
-                  </View>
-                )}
-
-                {interactionData.thermalBehavior !== "exothermic" &&
-                  interactionData.thermalBehavior !== "endothermic" &&
-                  interactionData.warning && (
-                    <View style={styles.infoInside}>
-                      <Text style={styles.infoTitle}>Observación</Text>
-
-                      <Text style={styles.infoText}>
-                        {interactionData.warning}
-                      </Text>
-                    </View>
-                  )}
-              </>
-            ) : (
-              <Text style={styles.analysisText}>
-                QuimiLab no posee información suficiente sobre el comportamiento
-                de esta sustancia en agua y no asumirá que forma una solución.
-              </Text>
-            )}
-          </View>
-        )}
 
         {plan ? (
           <>
@@ -452,8 +472,9 @@ export default function PreparacionLaboratorioScreen() {
             <Text style={styles.pendingTitle}>Procedimiento pendiente</Text>
 
             <Text style={styles.pendingText}>
-              QuimiLab necesita más información antes de seleccionar materiales
-              y generar un procedimiento seguro.
+              QuimiLab todavía necesita información suficiente sobre los
+              componentes o su interacción antes de seleccionar materiales y
+              generar un procedimiento.
             </Text>
           </View>
         )}
@@ -462,19 +483,69 @@ export default function PreparacionLaboratorioScreen() {
           <Text style={styles.infoTitle}>¿Cómo decide QuimiLab?</Text>
 
           <Text style={styles.infoText}>
-            El alumno ya no necesita indicar manualmente si la preparación es
-            sólido + líquido. QuimiLab consulta el estado físico de la sustancia
-            y analiza automáticamente la preparación.
+            QuimiLab identifica cada componente de forma independiente y
+            consulta su estado físico, solubilidad, comportamiento térmico y
+            nivel de seguridad.
           </Text>
 
           <Text style={styles.infoText}>
-            Luego utiliza la solubilidad, el comportamiento térmico y el nivel
-            de seguridad para seleccionar los materiales y el procedimiento
-            adecuado.
+            Cuando no existen datos suficientes sobre la interacción entre dos
+            sustancias, la aplicación no inventa un resultado y solicita más
+            información.
           </Text>
         </View>
       </ScrollView>
     </>
+  );
+}
+
+type SubstanceInputCardProps = {
+  title: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  substance: SubstanceRecord | null;
+};
+
+function SubstanceInputCard({
+  title,
+  value,
+  onChangeText,
+  substance,
+}: SubstanceInputCardProps) {
+  return (
+    <View style={styles.inputCard}>
+      <Text style={styles.label}>{title}</Text>
+
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        style={styles.input}
+        placeholder="Fórmula o nombre"
+        autoCapitalize="none"
+      />
+
+      {substance ? (
+        <View style={styles.identifiedBox}>
+          <Text style={styles.identifiedLabel}>SUSTANCIA IDENTIFICADA</Text>
+
+          <Text style={styles.identifiedName}>{substance.name}</Text>
+
+          <Text style={styles.identifiedFormula}>{substance.formula}</Text>
+
+          <Text style={styles.identifiedData}>
+            Estado físico: {getPhysicalStateLabel(substance.physicalState)}
+          </Text>
+
+          <Text style={styles.identifiedData}>
+            Seguridad: {getSafetyLabel(substance.safetyClassification)}
+          </Text>
+        </View>
+      ) : value.trim() !== "" ? (
+        <Text style={styles.notFoundText}>
+          Sustancia todavía no registrada en QuimiLab.
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -590,58 +661,43 @@ const styles = StyleSheet.create({
     color: "#173b40",
   },
 
-  helperText: {
-    color: "#617a7b",
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 8,
-  },
-
-  substanceCard: {
+  identifiedBox: {
+    marginTop: 14,
     backgroundColor: "#eaf7f5",
-    padding: 20,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#b9ddd8",
-    marginBottom: 22,
+    padding: 15,
+    borderRadius: 14,
   },
 
-  substanceLabel: {
+  identifiedLabel: {
     color: "#0d887d",
     fontWeight: "800",
-    fontSize: 13,
-    marginBottom: 6,
+    fontSize: 12,
+    marginBottom: 5,
   },
 
-  substanceName: {
+  identifiedName: {
     color: "#173b40",
     fontWeight: "800",
-    fontSize: 24,
+    fontSize: 20,
   },
 
-  substanceFormula: {
+  identifiedFormula: {
     color: "#617a7b",
-    fontSize: 17,
-    marginTop: 3,
-    marginBottom: 14,
+    fontSize: 16,
+    marginTop: 2,
+    marginBottom: 8,
   },
 
-  dataRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 7,
-  },
-
-  dataTitle: {
-    color: "#173b40",
-    fontWeight: "800",
-    fontSize: 15,
-    marginRight: 5,
-  },
-
-  dataText: {
+  identifiedData: {
     color: "#4f696b",
-    fontSize: 15,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+
+  notFoundText: {
+    marginTop: 10,
+    color: "#9a6811",
+    fontSize: 14,
   },
 
   objectiveCard: {
@@ -731,35 +787,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  unitRow: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-
-  unitButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#cddfdd",
-    backgroundColor: "#ffffff",
-  },
-
-  unitButtonActive: {
-    backgroundColor: "#0d887d",
-    borderColor: "#0d887d",
-  },
-
-  unitText: {
-    color: "#173b40",
-    fontWeight: "700",
-  },
-
-  unitTextActive: {
-    color: "#ffffff",
-  },
-
   analysisCard: {
     backgroundColor: "#ffffff",
     borderRadius: 20,
@@ -795,6 +822,54 @@ const styles = StyleSheet.create({
     color: "#4f696b",
     fontSize: 16,
     lineHeight: 24,
+  },
+
+  pendingAnalysis: {
+    backgroundColor: "#fff6df",
+    borderRadius: 15,
+    padding: 16,
+  },
+
+  pendingAnalysisTitle: {
+    color: "#805a08",
+    fontWeight: "800",
+    fontSize: 17,
+    marginBottom: 7,
+  },
+
+  pendingAnalysisText: {
+    color: "#6c562b",
+    fontSize: 15,
+    lineHeight: 23,
+  },
+
+  unitRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+
+  unitButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#cddfdd",
+    backgroundColor: "#ffffff",
+  },
+
+  unitButtonActive: {
+    backgroundColor: "#0d887d",
+    borderColor: "#0d887d",
+  },
+
+  unitText: {
+    color: "#173b40",
+    fontWeight: "700",
+  },
+
+  unitTextActive: {
+    color: "#ffffff",
   },
 
   resultCard: {

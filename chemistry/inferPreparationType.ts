@@ -12,11 +12,21 @@ export type AutomaticPreparationResult = {
   explanation: string;
   detectedAutomatically: boolean;
   needsMoreData: boolean;
+  component1State?: SubstanceInfo["physicalState"];
+  component2State?: SubstanceInfo["physicalState"];
 };
 
 type InferPreparationInput = {
   substance: SubstanceInfo | null | undefined;
+
+  secondSubstance?: SubstanceInfo | null;
+
   isDilution?: boolean;
+
+  /*
+   * Se mantiene temporalmente para que la pantalla actual
+   * siga funcionando mientras migramos a dos sustancias.
+   */
   secondComponentState?:
     | "solid"
     | "liquid"
@@ -31,8 +41,9 @@ export function inferPreparationType(
 ): AutomaticPreparationResult {
   const {
     substance,
+    secondSubstance = null,
     isDilution = false,
-    secondComponentState = "liquid",
+    secondComponentState = null,
   } = input;
 
   if (!substance) {
@@ -40,73 +51,126 @@ export function inferPreparationType(
       type: null,
       title: "Preparación no identificada",
       explanation:
-        "QuimiLab necesita identificar la sustancia antes de determinar automáticamente el tipo de preparación.",
+        "QuimiLab necesita identificar al menos la primera sustancia antes de determinar automáticamente el tipo de preparación.",
       detectedAutomatically: false,
       needsMoreData: true,
     };
   }
+
+  const component1State = substance.physicalState ?? null;
+
+  const component2State =
+    secondSubstance?.physicalState ?? secondComponentState ?? null;
 
   if (isDilution) {
     return {
       type: "liquidDilution",
       title: "Dilución",
       explanation:
-        "Se indicó que la preparación parte de una solución madre para obtener una solución menos concentrada.",
+        "El objetivo indicado es obtener una solución menos concentrada a partir de una solución madre.",
       detectedAutomatically: true,
       needsMoreData: false,
+      component1State,
+      component2State,
+    };
+  }
+
+  if (!component1State) {
+    return {
+      type: null,
+      title: "Estado físico no disponible",
+      explanation:
+        "QuimiLab reconoce la primera sustancia, pero todavía no posee información suficiente sobre su estado físico.",
+      detectedAutomatically: false,
+      needsMoreData: true,
+      component1State,
+      component2State,
+    };
+  }
+
+  if (!component2State) {
+    return {
+      type: null,
+      title: "Falta identificar el segundo componente",
+      explanation:
+        "QuimiLab ya conoce la primera sustancia, pero necesita identificar el segundo componente para decidir automáticamente qué tipo de preparación corresponde.",
+      detectedAutomatically: false,
+      needsMoreData: true,
+      component1State,
+      component2State,
     };
   }
 
   if (
-    substance.physicalState === "viscousLiquid" ||
-    substance.physicalState === "semisolid"
+    component1State === "viscousLiquid" ||
+    component1State === "semisolid" ||
+    component2State === "viscousLiquid" ||
+    component2State === "semisolid"
   ) {
     return {
       type: "viscousPreparation",
-      title: "Sustancia viscosa o semisólida",
+      title: "Preparación con sustancia viscosa o semisólida",
       explanation:
-        "QuimiLab detectó que la sustancia presenta un estado físico que requiere considerar masa, viscosidad o densidad.",
+        "QuimiLab detectó que al menos uno de los componentes es viscoso o semisólido. La preparación debe considerar masa, viscosidad, densidad y dificultad de transferencia.",
       detectedAutomatically: true,
       needsMoreData: false,
+      component1State,
+      component2State,
     };
   }
 
-  if (substance.physicalState === "solid" && secondComponentState === "solid") {
+  if (component1State === "solid" && component2State === "solid") {
     return {
       type: "solidSolidMixture",
       title: "Sólido + sólido",
       explanation:
-        "QuimiLab detectó que ambos componentes son sólidos, por lo que corresponde una preparación y homogeneización de sólidos.",
+        "QuimiLab detectó que ambos componentes son sólidos. Corresponde evaluar una preparación por pesada, mezcla y homogeneización.",
       detectedAutomatically: true,
       needsMoreData: false,
+      component1State,
+      component2State,
     };
   }
 
   if (
-    substance.physicalState === "solid" &&
-    secondComponentState === "liquid"
+    (component1State === "solid" && component2State === "liquid") ||
+    (component1State === "liquid" && component2State === "solid")
   ) {
     return {
       type: "solidLiquidSolution",
       title: "Sólido + líquido",
       explanation:
-        "QuimiLab detectó un componente sólido y un componente líquido. La solubilidad determinará si la preparación final es una solución, suspensión o dispersión.",
+        "QuimiLab detectó un componente sólido y otro líquido. El comportamiento entre ambos determinará si la preparación final es una solución, suspensión o dispersión.",
       detectedAutomatically: true,
       needsMoreData: false,
+      component1State,
+      component2State,
     };
   }
 
-  if (
-    substance.physicalState === "liquid" &&
-    secondComponentState === "liquid"
-  ) {
+  if (component1State === "liquid" && component2State === "liquid") {
     return {
       type: null,
       title: "Líquido + líquido",
       explanation:
-        "QuimiLab detectó dos componentes líquidos. Para decidir el procedimiento necesita saber si se trata de una dilución, una mezcla homogénea o una mezcla de líquidos inmiscibles.",
+        "QuimiLab detectó dos líquidos. Ahora debe analizar su miscibilidad y el objetivo de la experiencia para decidir si corresponde una mezcla homogénea, una mezcla heterogénea o una dilución.",
       detectedAutomatically: true,
       needsMoreData: true,
+      component1State,
+      component2State,
+    };
+  }
+
+  if (component1State === "gas" || component2State === "gas") {
+    return {
+      type: null,
+      title: "Preparación con componente gaseoso",
+      explanation:
+        "QuimiLab detectó un componente gaseoso. Este tipo de preparación requiere un módulo específico antes de generar un procedimiento de laboratorio.",
+      detectedAutomatically: true,
+      needsMoreData: true,
+      component1State,
+      component2State,
     };
   }
 
@@ -114,8 +178,10 @@ export function inferPreparationType(
     type: null,
     title: "Preparación pendiente de clasificación",
     explanation:
-      "QuimiLab reconoce el estado físico de la sustancia, pero necesita más información sobre el segundo componente o el objetivo de la preparación.",
+      "QuimiLab reconoce los estados físicos de los componentes, pero todavía necesita más información para generar un procedimiento adecuado.",
     detectedAutomatically: false,
     needsMoreData: true,
+    component1State,
+    component2State,
   };
 }
