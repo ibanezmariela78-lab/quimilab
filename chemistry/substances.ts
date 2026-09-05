@@ -244,6 +244,23 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     preparationTypes: ["solution"],
   },
 
+  C6H14: {
+    name: "Hexano",
+    physicalState: "liquid",
+    waterSolubility: {
+      classification: "immiscible",
+      description:
+        "El hexano es prácticamente inmiscible con agua y forma una fase líquida separada.",
+      temperatureDependence: null,
+    },
+    dissolutionBehavior: "unknown",
+    observations: [
+      "El hexano es un líquido inflamable y debe manipularse únicamente bajo condiciones de laboratorio adecuadas.",
+    ],
+    preparationTypes: ["unknown"],
+    safetyClassification: "highPrecaution",
+  },
+
   "Mg3Si4O10(OH)2": {
     name: "Talco",
     physicalState: "solid",

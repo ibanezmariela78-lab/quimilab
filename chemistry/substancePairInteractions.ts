@@ -24,6 +24,17 @@ const substancePairInteractions: SubstancePairInteraction[] = [
     warning:
       "El etanol es inflamable y requiere las precauciones correspondientes durante su manipulación.",
   },
+
+  {
+    component1: "H2O",
+    component2: "C6H14",
+    interaction: "immiscible",
+    resultLabel: "Mezcla líquida heterogénea",
+    description:
+      "El agua y el hexano son inmiscibles entre sí. Al mezclarse forman dos fases líquidas separadas.",
+    warning:
+      "El hexano es inflamable y requiere condiciones adecuadas de laboratorio y supervisión.",
+  },
 ];
 
 export function getSubstancePairInteraction(
