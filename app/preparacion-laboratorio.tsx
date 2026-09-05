@@ -16,7 +16,11 @@ import {
 
 import { classifyMixture } from "../chemistry/classifyMixture";
 import { inferPreparationType } from "../chemistry/inferPreparationType";
+
+import { calculateMolarityPreparation } from "../chemistry/molarity";
+
 import { getInteractionWithWater } from "../chemistry/substanceInteractions";
+
 import { getSubstancePairInteraction } from "../chemistry/substancePairInteractions";
 
 import { findExactSubstance, SubstanceRecord } from "../chemistry/substances";
@@ -26,7 +30,7 @@ import { labEquipment } from "../data/labEquipment";
 type PreparationObjective = "combineComponents" | "dilution";
 
 export default function PreparacionLaboratorioScreen() {
-  const [component1Input, setComponent1Input] = useState("C2H5OH");
+  const [component1Input, setComponent1Input] = useState("CaCl2");
 
   const [component2Input, setComponent2Input] = useState("H2O");
 
@@ -36,6 +40,8 @@ export default function PreparacionLaboratorioScreen() {
   const [cantidadFinal, setCantidadFinal] = useState("500");
 
   const [unidadFinal, setUnidadFinal] = useState<"mL" | "L" | "g" | "kg">("mL");
+
+  const [molarityInput, setMolarityInput] = useState("0,5");
 
   const cantidadNumerica = Number(cantidadFinal.replace(",", "."));
 
@@ -162,6 +168,60 @@ export default function PreparacionLaboratorioScreen() {
     return "unknown" as const;
   }, [pairInteraction]);
 
+  /*
+   * Determina si tenemos una solución acuosa
+   * preparada a partir de un soluto sólido.
+   *
+   * Este es el caso en el que podemos reutilizar
+   * directamente el motor de molaridad.
+   */
+  const aqueousSolidSolute = useMemo(() => {
+    if (
+      !component1 ||
+      !component2 ||
+      objective !== "combineComponents" ||
+      mixtureAnalysis?.type !== "solution"
+    ) {
+      return null;
+    }
+
+    if (component1.formula === "H2O" && component2.physicalState === "solid") {
+      return component2;
+    }
+
+    if (component2.formula === "H2O" && component1.physicalState === "solid") {
+      return component1;
+    }
+
+    return null;
+  }, [component1, component2, objective, mixtureAnalysis]);
+
+  /*
+   * Cálculo real de preparación por molaridad.
+   * No duplicamos ninguna fórmula:
+   * reutilizamos chemistry/molarity.ts.
+   */
+  const molarityCalculation = useMemo<ReturnType<
+    typeof calculateMolarityPreparation
+  > | null>(() => {
+    if (!aqueousSolidSolute || !molarityInput.trim()) {
+      return null;
+    }
+
+    if (unidadFinal !== "mL" && unidadFinal !== "L") {
+      return {
+        error: "La molaridad requiere expresar el volumen final en mL o L.",
+      };
+    }
+
+    return calculateMolarityPreparation(
+      aqueousSolidSolute.formula,
+      molarityInput,
+      cantidadFinal,
+      unidadFinal,
+    );
+  }, [aqueousSolidSolute, molarityInput, cantidadFinal, unidadFinal]);
+
   const plan = useMemo(() => {
     if (!automaticPreparation.type) {
       return null;
@@ -240,9 +300,9 @@ export default function PreparacionLaboratorioScreen() {
         <Text style={styles.title}>Preparación de laboratorio</Text>
 
         <Text style={styles.subtitle}>
-          Ingresá los componentes. QuimiLab identifica sus estados físicos,
-          analiza su interacción y determina automáticamente el tipo de
-          preparación.
+          Ingresá los componentes. QuimiLab identifica sus propiedades, analiza
+          la preparación y, cuando corresponde, calcula automáticamente cuánto
+          material necesitás.
         </Text>
 
         <SubstanceInputCard
@@ -377,7 +437,7 @@ export default function PreparacionLaboratorioScreen() {
                   <Text style={styles.pendingAnalysisText}>
                     QuimiLab reconoce que ambos componentes son líquidos, pero
                     todavía no dispone de información específica sobre su
-                    interacción. No se asumirá que son miscibles o inmiscibles.
+                    interacción.
                   </Text>
                 </View>
               )
@@ -444,7 +504,7 @@ export default function PreparacionLaboratorioScreen() {
                 <Text style={styles.pendingAnalysisText}>
                   QuimiLab conoce ambas sustancias y sus estados físicos, pero
                   todavía no posee datos suficientes sobre la interacción
-                  específica entre estos dos componentes.
+                  específica entre estos componentes.
                 </Text>
               </View>
             )}
@@ -486,6 +546,109 @@ export default function PreparacionLaboratorioScreen() {
             ))}
           </View>
         </View>
+
+        {aqueousSolidSolute && (
+          <View style={styles.calculationCard}>
+            <Text style={styles.calculationLabel}>CÁLCULO DE PREPARACIÓN</Text>
+
+            <Text style={styles.calculationTitle}>
+              Preparación por molaridad
+            </Text>
+
+            <Text style={styles.calculationIntro}>
+              QuimiLab detectó una solución acuosa preparada a partir de un
+              soluto sólido. Puede calcular automáticamente la masa que
+              necesitás pesar.
+            </Text>
+
+            <Text style={styles.label}>Molaridad deseada</Text>
+
+            <View style={styles.molarityInputRow}>
+              <TextInput
+                value={molarityInput}
+                onChangeText={setMolarityInput}
+                keyboardType="decimal-pad"
+                style={[styles.input, styles.molarityInput]}
+                placeholder="0,5"
+              />
+
+              <Text style={styles.inputSuffix}>mol/L</Text>
+            </View>
+
+            {molarityCalculation ? (
+              "error" in molarityCalculation ? (
+                <View style={styles.calculationError}>
+                  <Text style={styles.calculationErrorTitle}>
+                    No se puede calcular
+                  </Text>
+
+                  <Text style={styles.calculationErrorText}>
+                    {molarityCalculation.error}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.calculationSteps}>
+                    <Text style={styles.calculationStepTitle}>
+                      1. Moles necesarios
+                    </Text>
+
+                    <Text style={styles.calculationEquation}>n = M × V</Text>
+
+                    <Text style={styles.calculationValue}>
+                      n = {formatNumber(molarityCalculation.molarity)} ×{" "}
+                      {formatNumber(molarityCalculation.volumeLiters)} L
+                    </Text>
+
+                    <Text style={styles.calculationStrong}>
+                      n = {formatNumber(molarityCalculation.molesNeeded)} mol
+                    </Text>
+
+                    <Text style={styles.calculationStepTitle}>
+                      2. Masa de soluto
+                    </Text>
+
+                    <Text style={styles.calculationEquation}>m = n × MM</Text>
+
+                    <Text style={styles.calculationValue}>
+                      m = {formatNumber(molarityCalculation.molesNeeded)} ×{" "}
+                      {formatNumber(
+                        molarityCalculation.molarMass.molarMass ?? 0,
+                      )}{" "}
+                      g/mol
+                    </Text>
+                  </View>
+
+                  <View style={styles.finalCalculation}>
+                    <Text style={styles.finalCalculationLabel}>RESULTADO</Text>
+
+                    <Text style={styles.finalCalculationMass}>
+                      {formatNumber(molarityCalculation.gramsNeeded, 2)} g de{" "}
+                      {molarityCalculation.formula}
+                    </Text>
+
+                    <Text style={styles.finalCalculationText}>
+                      para preparar {formatNumber(molarityCalculation.volume)}{" "}
+                      {molarityCalculation.volumeUnit} de solución{" "}
+                      {formatNumber(molarityCalculation.molarity)} M
+                    </Text>
+                  </View>
+
+                  <View style={styles.volumeNote}>
+                    <Text style={styles.volumeNoteTitle}>Importante</Text>
+
+                    <Text style={styles.volumeNoteText}>
+                      El volumen indicado es el volumen final de la solución. No
+                      significa agregar el soluto a esa cantidad de agua.
+                      Primero se disuelve en una cantidad menor de solvente y
+                      luego se completa hasta el volumen final.
+                    </Text>
+                  </View>
+                </>
+              )
+            ) : null}
+          </View>
+        )}
 
         {plan ? (
           <>
@@ -561,14 +724,14 @@ export default function PreparacionLaboratorioScreen() {
           <Text style={styles.infoTitle}>¿Cómo decide QuimiLab?</Text>
 
           <Text style={styles.infoText}>
-            QuimiLab identifica cada componente, compara sus estados físicos y
-            consulta la información disponible sobre solubilidad o miscibilidad.
+            QuimiLab identifica los componentes, analiza sus propiedades y
+            determina el tipo de preparación.
           </Text>
 
           <Text style={styles.infoText}>
-            Si dos líquidos son miscibles, puede reconocer una mezcla líquida
-            homogénea. Si fueran inmiscibles, los clasificaría como mezcla
-            líquida heterogénea y no como emulsión automáticamente.
+            Cuando detecta una solución acuosa preparada a partir de un soluto
+            sólido, puede integrar el cálculo de molaridad para determinar
+            automáticamente la masa que debe pesarse.
           </Text>
         </View>
       </ScrollView>
@@ -679,6 +842,13 @@ function getSafetyLabel(
   }
 }
 
+function formatNumber(value: number, decimals = 3): string {
+  return value
+    .toFixed(decimals)
+    .replace(/\.?(0+)$/u, "")
+    .replace(".", ",");
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -736,6 +906,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 18,
     color: "#173b40",
+    backgroundColor: "#ffffff",
   },
 
   identifiedBox: {
@@ -947,6 +1118,155 @@ const styles = StyleSheet.create({
 
   unitTextActive: {
     color: "#ffffff",
+  },
+
+  calculationCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#0d887d",
+    padding: 20,
+    marginBottom: 22,
+  },
+
+  calculationLabel: {
+    color: "#0d887d",
+    fontWeight: "800",
+    fontSize: 13,
+    marginBottom: 6,
+  },
+
+  calculationTitle: {
+    color: "#173b40",
+    fontSize: 25,
+    fontWeight: "800",
+    marginBottom: 8,
+  },
+
+  calculationIntro: {
+    color: "#617a7b",
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 14,
+  },
+
+  molarityInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  molarityInput: {
+    flex: 1,
+  },
+
+  inputSuffix: {
+    marginLeft: 10,
+    color: "#617a7b",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
+  calculationSteps: {
+    backgroundColor: "#f4f9f8",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 18,
+  },
+
+  calculationStepTitle: {
+    color: "#173b40",
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 7,
+    marginTop: 7,
+  },
+
+  calculationEquation: {
+    color: "#0d887d",
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 5,
+  },
+
+  calculationValue: {
+    color: "#4f696b",
+    fontSize: 16,
+    lineHeight: 23,
+  },
+
+  calculationStrong: {
+    color: "#173b40",
+    fontSize: 17,
+    fontWeight: "800",
+    marginTop: 5,
+    marginBottom: 12,
+  },
+
+  finalCalculation: {
+    backgroundColor: "#0d887d",
+    borderRadius: 17,
+    padding: 18,
+    marginTop: 16,
+  },
+
+  finalCalculationLabel: {
+    color: "#d9f4ef",
+    fontWeight: "800",
+    fontSize: 12,
+    marginBottom: 7,
+  },
+
+  finalCalculationMass: {
+    color: "#ffffff",
+    fontSize: 25,
+    fontWeight: "800",
+    marginBottom: 7,
+  },
+
+  finalCalculationText: {
+    color: "#e6f7f4",
+    fontSize: 16,
+    lineHeight: 23,
+  },
+
+  calculationError: {
+    backgroundColor: "#fff6df",
+    padding: 16,
+    borderRadius: 15,
+    marginTop: 16,
+  },
+
+  calculationErrorTitle: {
+    color: "#805a08",
+    fontWeight: "800",
+    fontSize: 17,
+    marginBottom: 6,
+  },
+
+  calculationErrorText: {
+    color: "#6c562b",
+    fontSize: 15,
+    lineHeight: 22,
+  },
+
+  volumeNote: {
+    backgroundColor: "#e0f4f0",
+    borderRadius: 15,
+    padding: 16,
+    marginTop: 16,
+  },
+
+  volumeNoteTitle: {
+    color: "#173b40",
+    fontWeight: "800",
+    fontSize: 17,
+    marginBottom: 6,
+  },
+
+  volumeNoteText: {
+    color: "#4f696b",
+    fontSize: 15,
+    lineHeight: 23,
   },
 
   resultCard: {
