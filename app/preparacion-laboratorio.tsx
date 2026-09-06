@@ -23,9 +23,7 @@ import {
 } from "../chemistry/concentrationPreparation";
 
 import { inferPreparationType } from "../chemistry/inferPreparationType";
-
 import { getInteractionWithWater } from "../chemistry/substanceInteractions";
-
 import { getSubstancePairInteraction } from "../chemistry/substancePairInteractions";
 
 import {
@@ -230,12 +228,29 @@ export default function PreparacionLaboratorioScreen() {
       });
     }
 
+    if (concentrationMethod === "molality") {
+      return calculateConcentrationPreparation({
+        method: "molality",
+        formula: aqueousSolidSolute.formula,
+        concentration: concentrationInput,
+        solventMass: solventMassInput,
+        solventMassUnit,
+      });
+    }
+
+    if (unidadFinal !== "mL" && unidadFinal !== "L") {
+      return {
+        method: "normality" as const,
+        error: "La normalidad requiere un volumen final expresado en mL o L.",
+      };
+    }
+
     return calculateConcentrationPreparation({
-      method: "molality",
+      method: "normality",
       formula: aqueousSolidSolute.formula,
       concentration: concentrationInput,
-      solventMass: solventMassInput,
-      solventMassUnit,
+      volume: cantidadFinal,
+      volumeUnit: unidadFinal,
     });
   }, [
     aqueousSolidSolute,
@@ -327,7 +342,7 @@ export default function PreparacionLaboratorioScreen() {
       title: "Preparación de una solución por molalidad",
 
       description:
-        "La molalidad se basa en la cantidad de soluto por kilogramo de solvente. La preparación se realiza por masa y no completando hasta un volumen final.",
+        "La molalidad se basa en los moles de soluto por kilogramo de solvente. La preparación se realiza por masa y no completando hasta un volumen final.",
 
       equipmentIds: [
         "balance",
@@ -344,7 +359,7 @@ export default function PreparacionLaboratorioScreen() {
 
         `Pesá ${formatNumber(
           result.solventMass,
-        )} ${result.solventMassUnit} de agua, que corresponde a la masa de solvente indicada.`,
+        )} ${result.solventMassUnit} de agua.`,
 
         "Utilizá otro recipiente adecuado para pesar el soluto.",
 
@@ -352,7 +367,7 @@ export default function PreparacionLaboratorioScreen() {
 
         "Agregá gradualmente el soluto al solvente pesado.",
 
-        "Mezclá con una varilla de vidrio hasta lograr la disolución cuando sea químicamente posible.",
+        "Mezclá hasta lograr la disolución cuando sea químicamente posible.",
 
         "Verificá que no quede material adherido al recipiente utilizado para pesar el soluto.",
 
@@ -385,6 +400,15 @@ export default function PreparacionLaboratorioScreen() {
   ]);
 
   const plan = useMemo(() => {
+    if (
+      aqueousSolidSolute &&
+      safetyLevel !== "highPrecaution" &&
+      concentrationCalculation &&
+      "error" in concentrationCalculation
+    ) {
+      return null;
+    }
+
     if (aqueousSolidSolute && concentrationMethod === "molality") {
       if (safetyLevel === "highPrecaution") {
         return basePlan;
@@ -398,6 +422,7 @@ export default function PreparacionLaboratorioScreen() {
     aqueousSolidSolute,
     concentrationMethod,
     safetyLevel,
+    concentrationCalculation,
     basePlan,
     molalityPlan,
   ]);
@@ -430,9 +455,8 @@ export default function PreparacionLaboratorioScreen() {
         <Text style={styles.title}>Preparación de laboratorio</Text>
 
         <Text style={styles.subtitle}>
-          Ingresá los componentes. QuimiLab identifica sus propiedades, analiza
-          la preparación y selecciona automáticamente el método de trabajo
-          adecuado.
+          Ingresá los componentes. QuimiLab analiza las sustancias, selecciona
+          el método de preparación y realiza los cálculos correspondientes.
         </Text>
 
         <SubstanceInputCard
@@ -454,46 +478,29 @@ export default function PreparacionLaboratorioScreen() {
 
           <Pressable
             style={[
-              styles.objectiveCard,
-              objective === "combineComponents" && styles.objectiveCardActive,
+              styles.optionCard,
+              objective === "combineComponents" && styles.optionActive,
             ]}
             onPress={() => setObjective("combineComponents")}
           >
-            <Text
-              style={[
-                styles.objectiveTitle,
-                objective === "combineComponents" &&
-                  styles.objectiveTitleActive,
-              ]}
-            >
-              Combinar los componentes
-            </Text>
+            <Text style={styles.optionTitle}>Combinar los componentes</Text>
 
-            <Text style={styles.objectiveDescription}>
-              QuimiLab analizará los estados físicos, la solubilidad o la
-              miscibilidad.
+            <Text style={styles.optionText}>
+              Analizar solubilidad, miscibilidad y tipo de preparación.
             </Text>
           </Pressable>
 
           <Pressable
             style={[
-              styles.objectiveCard,
-              objective === "dilution" && styles.objectiveCardActive,
+              styles.optionCard,
+              objective === "dilution" && styles.optionActive,
             ]}
             onPress={() => setObjective("dilution")}
           >
-            <Text
-              style={[
-                styles.objectiveTitle,
-                objective === "dilution" && styles.objectiveTitleActive,
-              ]}
-            >
-              Diluir una solución madre
-            </Text>
+            <Text style={styles.optionTitle}>Diluir una solución madre</Text>
 
-            <Text style={styles.objectiveDescription}>
-              Preparar una solución menos concentrada a partir de una solución
-              madre.
+            <Text style={styles.optionText}>
+              Preparar una solución menos concentrada.
             </Text>
           </Pressable>
         </View>
@@ -508,190 +515,110 @@ export default function PreparacionLaboratorioScreen() {
           <Text style={styles.detectionText}>
             {automaticPreparation.explanation}
           </Text>
-
-          {automaticPreparation.detectedAutomatically &&
-            !automaticPreparation.needsMoreData && (
-              <View style={styles.detectedBadge}>
-                <Text style={styles.detectedBadgeText}>
-                  Detectado automáticamente por QuimiLab
-                </Text>
-              </View>
-            )}
-
-          {automaticPreparation.needsMoreData && (
-            <View style={styles.pendingBadge}>
-              <Text style={styles.pendingBadgeText}>
-                Se necesita más información
-              </Text>
-            </View>
-          )}
         </View>
 
         {component1 && component2 && objective === "combineComponents" && (
-          <View style={styles.analysisCard}>
-            <Text style={styles.analysisLabel}>
-              ANÁLISIS DE LOS COMPONENTES
-            </Text>
+          <View style={styles.card}>
+            <Text style={styles.smallLabel}>ANÁLISIS DE LOS COMPONENTES</Text>
 
-            <Text style={styles.analysisTitle}>
+            <Text style={styles.cardTitle}>
               {component1.name} + {component2.name}
             </Text>
 
             {isLiquidLiquid ? (
               pairInteraction ? (
                 <>
-                  <Text style={styles.analysisResult}>
+                  <Text style={styles.resultText}>
                     Resultado: {pairInteraction.resultLabel}
                   </Text>
 
-                  <Text style={styles.analysisText}>
-                    {pairInteraction.description}
-                  </Text>
-
-                  {pairInteraction.warning && (
-                    <View style={styles.warningInside}>
-                      <Text style={styles.warningTitle}>Seguridad</Text>
-
-                      <Text style={styles.warningText}>
-                        {pairInteraction.warning}
-                      </Text>
-                    </View>
-                  )}
+                  <Text style={styles.body}>{pairInteraction.description}</Text>
                 </>
               ) : (
-                <View style={styles.pendingAnalysis}>
-                  <Text style={styles.pendingAnalysisTitle}>
-                    Miscibilidad no registrada
-                  </Text>
-
-                  <Text style={styles.pendingAnalysisText}>
-                    QuimiLab reconoce ambos líquidos, pero todavía no dispone de
-                    información específica sobre su interacción.
-                  </Text>
-                </View>
+                <Text style={styles.body}>
+                  QuimiLab todavía no dispone de información específica sobre la
+                  interacción entre estos líquidos.
+                </Text>
               )
             ) : waterBasedInteraction ? (
               <>
-                <Text style={styles.analysisText}>
+                <Text style={styles.body}>
                   {waterBasedInteraction.description}
                 </Text>
 
                 {mixtureAnalysis && (
                   <>
-                    <Text style={styles.analysisResult}>
+                    <Text style={styles.resultText}>
                       Resultado: {mixtureAnalysis.label}
                     </Text>
 
-                    <Text style={styles.analysisText}>
+                    <Text style={styles.body}>
                       {mixtureAnalysis.explanation}
                     </Text>
                   </>
                 )}
 
-                {waterBasedInteraction.thermalBehavior === "exothermic" && (
+                {waterBasedInteraction.warning ? (
                   <View style={styles.warningInside}>
-                    <Text style={styles.warningTitle}>
-                      Comportamiento térmico
-                    </Text>
+                    <Text style={styles.warningTitle}>Observación</Text>
 
                     <Text style={styles.warningText}>
-                      {waterBasedInteraction.warning ??
-                        "La preparación puede liberar calor."}
+                      {waterBasedInteraction.warning}
                     </Text>
                   </View>
-                )}
-
-                {waterBasedInteraction.thermalBehavior === "endothermic" && (
-                  <View style={styles.infoInside}>
-                    <Text style={styles.infoTitle}>Comportamiento térmico</Text>
-
-                    <Text style={styles.infoText}>
-                      La disolución puede absorber calor y disminuir la
-                      temperatura de la preparación.
-                    </Text>
-                  </View>
-                )}
-
-                {waterBasedInteraction.thermalBehavior !== "exothermic" &&
-                  waterBasedInteraction.thermalBehavior !== "endothermic" &&
-                  waterBasedInteraction.warning && (
-                    <View style={styles.infoInside}>
-                      <Text style={styles.infoTitle}>Observación</Text>
-
-                      <Text style={styles.infoText}>
-                        {waterBasedInteraction.warning}
-                      </Text>
-                    </View>
-                  )}
+                ) : null}
               </>
             ) : (
-              <View style={styles.pendingAnalysis}>
-                <Text style={styles.pendingAnalysisTitle}>
-                  Interacción todavía no registrada
-                </Text>
-
-                <Text style={styles.pendingAnalysisText}>
-                  QuimiLab conoce ambas sustancias, pero todavía no posee datos
-                  suficientes sobre la interacción específica entre estos
-                  componentes.
-                </Text>
-              </View>
+              <Text style={styles.body}>
+                QuimiLab todavía no posee información suficiente sobre esta
+                interacción.
+              </Text>
             )}
           </View>
         )}
 
         {aqueousSolidSolute ? (
-          <View style={styles.calculationCard}>
-            <Text style={styles.calculationLabel}>CONCENTRACIÓN</Text>
+          <View style={styles.concentrationCard}>
+            <Text style={styles.smallLabel}>CONCENTRACIÓN</Text>
 
-            <Text style={styles.calculationTitle}>
+            <Text style={styles.cardTitle}>
               ¿Cómo querés expresar la concentración?
             </Text>
 
             <View style={styles.methodRow}>
-              <Pressable
-                style={[
-                  styles.methodButton,
-                  concentrationMethod === "molarity" &&
-                    styles.methodButtonActive,
-                ]}
-                onPress={() => setConcentrationMethod("molarity")}
-              >
-                <Text
+              {(
+                [
+                  ["molarity", "Molaridad"],
+                  ["molality", "Molalidad"],
+                  ["normality", "Normalidad"],
+                ] as const
+              ).map(([method, label]) => (
+                <Pressable
+                  key={method}
                   style={[
-                    styles.methodText,
-                    concentrationMethod === "molarity" &&
-                      styles.methodTextActive,
+                    styles.methodButton,
+                    concentrationMethod === method && styles.methodButtonActive,
                   ]}
+                  onPress={() => setConcentrationMethod(method)}
                 >
-                  Molaridad
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.methodButton,
-                  concentrationMethod === "molality" &&
-                    styles.methodButtonActive,
-                ]}
-                onPress={() => setConcentrationMethod("molality")}
-              >
-                <Text
-                  style={[
-                    styles.methodText,
-                    concentrationMethod === "molality" &&
-                      styles.methodTextActive,
-                  ]}
-                >
-                  Molalidad
-                </Text>
-              </Pressable>
+                  <Text
+                    style={[
+                      styles.methodText,
+                      concentrationMethod === method && styles.methodTextActive,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
 
             <Text style={styles.label}>
               {concentrationMethod === "molarity"
                 ? "Molaridad deseada"
-                : "Molalidad deseada"}
+                : concentrationMethod === "molality"
+                  ? "Molalidad deseada"
+                  : "Normalidad deseada"}
             </Text>
 
             <View style={styles.valueRow}>
@@ -703,50 +630,16 @@ export default function PreparacionLaboratorioScreen() {
                 placeholder="0,5"
               />
 
-              <Text style={styles.inputSuffix}>
-                {concentrationMethod === "molarity" ? "mol/L" : "mol/kg"}
+              <Text style={styles.suffix}>
+                {concentrationMethod === "molarity"
+                  ? "mol/L"
+                  : concentrationMethod === "molality"
+                    ? "mol/kg"
+                    : "eq/L"}
               </Text>
             </View>
 
-            {concentrationMethod === "molarity" ? (
-              <>
-                <Text style={styles.label}>Volumen final de solución</Text>
-
-                <TextInput
-                  value={cantidadFinal}
-                  onChangeText={setCantidadFinal}
-                  keyboardType="decimal-pad"
-                  style={styles.input}
-                  placeholder="500"
-                />
-
-                <View style={styles.unitRow}>
-                  {(["mL", "L"] as const).map((unit) => (
-                    <Pressable
-                      key={unit}
-                      style={[
-                        styles.unitButton,
-                        unidadFinal === unit && styles.unitButtonActive,
-                      ]}
-                      onPress={() => setUnidadFinal(unit)}
-                    >
-                      <Text
-                        style={[
-                          styles.unitText,
-                          unidadFinal === unit && styles.unitTextActive,
-                        ]}
-                      >
-                        {unit}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                <Text style={styles.methodExplanation}>
-                  La molaridad utiliza el volumen final de la solución.
-                </Text>
-              </>
-            ) : (
+            {concentrationMethod === "molality" ? (
               <>
                 <Text style={styles.label}>Masa de solvente</Text>
 
@@ -755,7 +648,6 @@ export default function PreparacionLaboratorioScreen() {
                   onChangeText={setSolventMassInput}
                   keyboardType="decimal-pad"
                   style={styles.input}
-                  placeholder="500"
                 />
 
                 <View style={styles.unitRow}>
@@ -780,168 +672,67 @@ export default function PreparacionLaboratorioScreen() {
                   ))}
                 </View>
 
-                <Text style={styles.methodExplanation}>
-                  La molalidad utiliza la masa del solvente, no el volumen final
-                  de la solución.
+                <Text style={styles.helper}>
+                  La molalidad utiliza masa de solvente. No utiliza volumen
+                  final.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.label}>Volumen final de solución</Text>
+
+                <TextInput
+                  value={cantidadFinal}
+                  onChangeText={setCantidadFinal}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                />
+
+                <View style={styles.unitRow}>
+                  {(["mL", "L"] as const).map((unit) => (
+                    <Pressable
+                      key={unit}
+                      style={[
+                        styles.unitButton,
+                        unidadFinal === unit && styles.unitButtonActive,
+                      ]}
+                      onPress={() => setUnidadFinal(unit)}
+                    >
+                      <Text
+                        style={[
+                          styles.unitText,
+                          unidadFinal === unit && styles.unitTextActive,
+                        ]}
+                      >
+                        {unit}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Text style={styles.helper}>
+                  {concentrationMethod === "molarity"
+                    ? "La molaridad utiliza el volumen final de la solución."
+                    : "La normalidad utiliza equivalentes por litro de solución y depende de la reacción considerada."}
                 </Text>
               </>
             )}
 
             {concentrationCalculation ? (
               "error" in concentrationCalculation ? (
-                <View style={styles.calculationError}>
-                  <Text style={styles.calculationErrorTitle}>
-                    No se puede calcular
-                  </Text>
+                <View style={styles.errorBox}>
+                  <Text style={styles.warningTitle}>No se puede calcular</Text>
 
-                  <Text style={styles.calculationErrorText}>
+                  <Text style={styles.warningText}>
                     {concentrationCalculation.error}
                   </Text>
                 </View>
               ) : concentrationCalculation.method === "molarity" ? (
-                <>
-                  <View style={styles.calculationSteps}>
-                    <Text style={styles.calculationStepTitle}>
-                      1. Calcular los moles
-                    </Text>
-
-                    <Text style={styles.calculationEquation}>n = M × V</Text>
-
-                    <Text style={styles.calculationValue}>
-                      n ={" "}
-                      {formatNumber(concentrationCalculation.result.molarity)} ×{" "}
-                      {formatNumber(
-                        concentrationCalculation.result.volumeLiters,
-                      )}{" "}
-                      L
-                    </Text>
-
-                    <Text style={styles.calculationStrong}>
-                      n ={" "}
-                      {formatNumber(
-                        concentrationCalculation.result.molesNeeded,
-                      )}{" "}
-                      mol
-                    </Text>
-
-                    <Text style={styles.calculationStepTitle}>
-                      2. Convertir moles a gramos
-                    </Text>
-
-                    <Text style={styles.calculationEquation}>
-                      masa = n × MM
-                    </Text>
-                  </View>
-
-                  <View style={styles.finalCalculation}>
-                    <Text style={styles.finalCalculationLabel}>RESULTADO</Text>
-
-                    <Text style={styles.finalCalculationMass}>
-                      {formatNumber(
-                        concentrationCalculation.result.gramsNeeded,
-                        2,
-                      )}{" "}
-                      g de {concentrationCalculation.result.formula}
-                    </Text>
-
-                    <Text style={styles.finalCalculationText}>
-                      para preparar{" "}
-                      {formatNumber(concentrationCalculation.result.volume)}{" "}
-                      {concentrationCalculation.result.volumeUnit} de solución{" "}
-                      {formatNumber(concentrationCalculation.result.molarity)} M
-                    </Text>
-                  </View>
-
-                  <View style={styles.volumeNote}>
-                    <Text style={styles.volumeNoteTitle}>Importante</Text>
-
-                    <Text style={styles.volumeNoteText}>
-                      El volumen indicado corresponde al volumen final de la
-                      solución. No significa agregar el soluto a esa cantidad de
-                      agua.
-                    </Text>
-                  </View>
-                </>
+                <MolarityResult result={concentrationCalculation.result} />
+              ) : concentrationCalculation.method === "molality" ? (
+                <MolalityResult result={concentrationCalculation.result} />
               ) : (
-                <>
-                  <View style={styles.calculationSteps}>
-                    <Text style={styles.calculationStepTitle}>
-                      1. Masa de solvente en kg
-                    </Text>
-
-                    <Text style={styles.calculationStrong}>
-                      {formatNumber(
-                        concentrationCalculation.result.solventMassKg,
-                      )}{" "}
-                      kg
-                    </Text>
-
-                    <Text style={styles.calculationStepTitle}>
-                      2. Calcular los moles de soluto
-                    </Text>
-
-                    <Text style={styles.calculationEquation}>
-                      n = m × kg de solvente
-                    </Text>
-
-                    <Text style={styles.calculationValue}>
-                      n ={" "}
-                      {formatNumber(concentrationCalculation.result.molality)} ×{" "}
-                      {formatNumber(
-                        concentrationCalculation.result.solventMassKg,
-                      )}
-                    </Text>
-
-                    <Text style={styles.calculationStrong}>
-                      n ={" "}
-                      {formatNumber(
-                        concentrationCalculation.result.molesNeeded,
-                      )}{" "}
-                      mol
-                    </Text>
-
-                    <Text style={styles.calculationStepTitle}>
-                      3. Convertir moles a gramos
-                    </Text>
-
-                    <Text style={styles.calculationEquation}>
-                      masa = n × MM
-                    </Text>
-                  </View>
-
-                  <View style={styles.finalCalculation}>
-                    <Text style={styles.finalCalculationLabel}>RESULTADO</Text>
-
-                    <Text style={styles.finalCalculationMass}>
-                      {formatNumber(
-                        concentrationCalculation.result.gramsNeeded,
-                        2,
-                      )}{" "}
-                      g de {concentrationCalculation.result.formula}
-                    </Text>
-
-                    <Text style={styles.finalCalculationText}>
-                      con{" "}
-                      {formatNumber(
-                        concentrationCalculation.result.solventMass,
-                      )}{" "}
-                      {concentrationCalculation.result.solventMassUnit} de
-                      solvente para obtener una molalidad de{" "}
-                      {formatNumber(concentrationCalculation.result.molality)}{" "}
-                      mol/kg
-                    </Text>
-                  </View>
-
-                  <View style={styles.volumeNote}>
-                    <Text style={styles.volumeNoteTitle}>Importante</Text>
-
-                    <Text style={styles.volumeNoteText}>
-                      La masa indicada corresponde al solvente, no a la masa
-                      total de la solución. En molalidad no se completa hasta un
-                      volumen final.
-                    </Text>
-                  </View>
-                </>
+                <NormalityResult result={concentrationCalculation.result} />
               )
             ) : null}
           </View>
@@ -954,7 +745,6 @@ export default function PreparacionLaboratorioScreen() {
               onChangeText={setCantidadFinal}
               keyboardType="decimal-pad"
               style={styles.input}
-              placeholder="500"
             />
 
             <View style={styles.unitRow}>
@@ -983,12 +773,12 @@ export default function PreparacionLaboratorioScreen() {
 
         {plan ? (
           <>
-            <View style={styles.resultCard}>
-              <Text style={styles.resultLabel}>PLAN DE PREPARACIÓN</Text>
+            <View style={styles.planCard}>
+              <Text style={styles.planLabel}>PLAN DE PREPARACIÓN</Text>
 
-              <Text style={styles.resultTitle}>{plan.title}</Text>
+              <Text style={styles.planTitle}>{plan.title}</Text>
 
-              <Text style={styles.resultDescription}>{plan.description}</Text>
+              <Text style={styles.planText}>{plan.description}</Text>
             </View>
 
             {materiales.length > 0 && (
@@ -999,12 +789,10 @@ export default function PreparacionLaboratorioScreen() {
                   <View key={material.id} style={styles.materialRow}>
                     <Text style={styles.bullet}>•</Text>
 
-                    <View style={styles.materialContent}>
+                    <View style={styles.flex}>
                       <Text style={styles.materialName}>{material.nombre}</Text>
 
-                      <Text style={styles.materialReason}>
-                        {material.porqueUsarlo}
-                      </Text>
+                      <Text style={styles.body}>{material.porqueUsarlo}</Text>
                     </View>
                   </View>
                 ))}
@@ -1043,29 +831,187 @@ export default function PreparacionLaboratorioScreen() {
           <View style={styles.pendingCard}>
             <Text style={styles.pendingTitle}>Procedimiento pendiente</Text>
 
-            <Text style={styles.pendingText}>
-              QuimiLab necesita información suficiente para seleccionar
-              materiales y generar un procedimiento correcto.
+            <Text style={styles.body}>
+              QuimiLab necesita información suficiente para generar un
+              procedimiento correcto.
             </Text>
           </View>
         )}
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>¿Cómo decide QuimiLab?</Text>
+          <Text style={styles.sectionTitle}>¿Cómo decide QuimiLab?</Text>
 
-          <Text style={styles.infoText}>
-            QuimiLab analiza las sustancias, sus estados físicos y su
-            interacción antes de determinar el procedimiento.
-          </Text>
-
-          <Text style={styles.infoText}>
-            Cuando se prepara una solución acuosa desde un soluto sólido,
-            permite elegir el método de concentración y modifica automáticamente
-            los datos, cálculos, materiales y procedimiento.
+          <Text style={styles.body}>
+            QuimiLab analiza las sustancias, la interacción entre los
+            componentes, el método de concentración y el nivel de seguridad
+            antes de generar los cálculos y el procedimiento.
           </Text>
         </View>
       </ScrollView>
     </>
+  );
+}
+
+function MolarityResult({
+  result,
+}: {
+  result: {
+    formula: string;
+    molarity: number;
+    volume: number;
+    volumeUnit: "mL" | "L";
+    volumeLiters: number;
+    molesNeeded: number;
+    gramsNeeded: number;
+    molarMass: {
+      molarMass: number | null;
+    };
+  };
+}) {
+  return (
+    <>
+      <View style={styles.calculationBox}>
+        <Text style={styles.calculationTitle}>Paso 1: calcular los moles</Text>
+
+        <Text style={styles.equation}>n = M × V</Text>
+
+        <Text style={styles.body}>
+          n = {formatNumber(result.molarity)} ×{" "}
+          {formatNumber(result.volumeLiters)} L
+        </Text>
+
+        <Text style={styles.strong}>
+          n = {formatNumber(result.molesNeeded)} mol
+        </Text>
+
+        <Text style={styles.calculationTitle}>
+          Paso 2: convertir moles a gramos
+        </Text>
+
+        <Text style={styles.equation}>masa = n × MM</Text>
+      </View>
+
+      <ResultBox>
+        {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
+        {"\n"}
+        para preparar {formatNumber(result.volume)} {result.volumeUnit} de
+        solución {formatNumber(result.molarity)} M
+      </ResultBox>
+    </>
+  );
+}
+
+function MolalityResult({
+  result,
+}: {
+  result: {
+    formula: string;
+    molality: number;
+    solventMass: number;
+    solventMassUnit: "g" | "kg";
+    solventMassKg: number;
+    molesNeeded: number;
+    gramsNeeded: number;
+  };
+}) {
+  return (
+    <>
+      <View style={styles.calculationBox}>
+        <Text style={styles.calculationTitle}>Paso 1: masa de solvente</Text>
+
+        <Text style={styles.strong}>
+          {formatNumber(result.solventMassKg)} kg
+        </Text>
+
+        <Text style={styles.calculationTitle}>Paso 2: calcular moles</Text>
+
+        <Text style={styles.equation}>n = m × kg de solvente</Text>
+
+        <Text style={styles.strong}>
+          n = {formatNumber(result.molesNeeded)} mol
+        </Text>
+      </View>
+
+      <ResultBox>
+        {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
+        {"\n"}
+        con {formatNumber(result.solventMass)} {result.solventMassUnit} de
+        solvente para una molalidad de {formatNumber(result.molality)} mol/kg
+      </ResultBox>
+    </>
+  );
+}
+
+function NormalityResult({
+  result,
+}: {
+  result: {
+    formula: string;
+    normality: number;
+    volume: number;
+    volumeUnit: "mL" | "L";
+    volumeLiters: number;
+    molarity: number;
+    equivalenceFactor: number;
+    equivalentWeight: number;
+    gramsNeeded: number;
+    equivalenceExplanation: string;
+    safetyWarning?: string;
+  };
+}) {
+  return (
+    <>
+      <View style={styles.calculationBox}>
+        <Text style={styles.calculationTitle}>Factor de equivalencia</Text>
+
+        <Text style={styles.strong}>n-factor = {result.equivalenceFactor}</Text>
+
+        <Text style={styles.body}>{result.equivalenceExplanation}</Text>
+
+        <Text style={styles.calculationTitle}>Peso equivalente</Text>
+
+        <Text style={styles.equation}>PE = MM / factor</Text>
+
+        <Text style={styles.strong}>
+          PE = {formatNumber(result.equivalentWeight, 3)} g/eq
+        </Text>
+
+        <Text style={styles.calculationTitle}>Relación con la molaridad</Text>
+
+        <Text style={styles.strong}>
+          M = {formatNumber(result.molarity)} mol/L
+        </Text>
+
+        <Text style={styles.calculationTitle}>Masa necesaria</Text>
+
+        <Text style={styles.equation}>masa = N × V × PE</Text>
+      </View>
+
+      <ResultBox>
+        {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
+        {"\n"}
+        para preparar {formatNumber(result.volume)} {result.volumeUnit} de
+        solución {formatNumber(result.normality)} N
+      </ResultBox>
+
+      {result.safetyWarning ? (
+        <View style={styles.warningCard}>
+          <Text style={styles.warningTitle}>Seguridad</Text>
+
+          <Text style={styles.warningText}>{result.safetyWarning}</Text>
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+function ResultBox({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={styles.finalResult}>
+      <Text style={styles.finalLabel}>RESULTADO</Text>
+
+      <Text style={styles.finalText}>{children}</Text>
+    </View>
   );
 }
 
@@ -1096,22 +1042,22 @@ function SubstanceInputCard({
 
       {substance ? (
         <View style={styles.identifiedBox}>
-          <Text style={styles.identifiedLabel}>SUSTANCIA IDENTIFICADA</Text>
+          <Text style={styles.smallLabel}>SUSTANCIA IDENTIFICADA</Text>
 
-          <Text style={styles.identifiedName}>{substance.name}</Text>
+          <Text style={styles.cardTitle}>{substance.name}</Text>
 
-          <Text style={styles.identifiedFormula}>{substance.formula}</Text>
+          <Text style={styles.body}>{substance.formula}</Text>
 
-          <Text style={styles.identifiedData}>
+          <Text style={styles.body}>
             Estado físico: {getPhysicalStateLabel(substance.physicalState)}
           </Text>
 
-          <Text style={styles.identifiedData}>
+          <Text style={styles.body}>
             Seguridad: {getSafetyLabel(substance.safetyClassification)}
           </Text>
         </View>
       ) : value.trim() !== "" ? (
-        <Text style={styles.notFoundText}>
+        <Text style={styles.warningText}>
           Sustancia todavía no registrada en QuimiLab.
         </Text>
       ) : null}
@@ -1190,274 +1136,184 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
   },
 
+  flex: {
+    flex: 1,
+  },
+
   title: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: "800",
     color: "#173b40",
     marginBottom: 12,
   },
 
   subtitle: {
+    fontSize: 17,
+    lineHeight: 25,
     color: "#617a7b",
-    fontSize: 18,
-    lineHeight: 27,
-    marginBottom: 28,
-  },
-
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#173b40",
-    marginBottom: 15,
+    marginBottom: 24,
   },
 
   inputCard: {
     backgroundColor: "#ffffff",
-    padding: 20,
-    borderRadius: 18,
     borderWidth: 1,
     borderColor: "#d3e2e0",
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 20,
+  },
+
+  card: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#d3e2e0",
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 20,
+  },
+
+  concentrationCard: {
+    backgroundColor: "#ffffff",
+    borderWidth: 2,
+    borderColor: "#0d887d",
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 22,
   },
 
-  label: {
+  sectionTitle: {
+    fontSize: 22,
     fontWeight: "800",
     color: "#173b40",
-    fontSize: 17,
+    marginBottom: 12,
+  },
+
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#173b40",
     marginBottom: 8,
+  },
+
+  smallLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#0d887d",
+    marginBottom: 6,
+  },
+
+  label: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#173b40",
     marginTop: 12,
+    marginBottom: 8,
   },
 
   input: {
     borderWidth: 1,
     borderColor: "#cddfdd",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 18,
+    borderRadius: 13,
+    paddingHorizontal: 15,
+    paddingVertical: 13,
+    fontSize: 17,
     color: "#173b40",
     backgroundColor: "#ffffff",
   },
 
   identifiedBox: {
-    marginTop: 14,
     backgroundColor: "#eaf7f5",
-    padding: 15,
     borderRadius: 14,
+    padding: 14,
+    marginTop: 13,
   },
 
-  identifiedLabel: {
-    color: "#0d887d",
-    fontWeight: "800",
-    fontSize: 12,
-    marginBottom: 5,
-  },
-
-  identifiedName: {
-    color: "#173b40",
-    fontWeight: "800",
-    fontSize: 20,
-  },
-
-  identifiedFormula: {
-    color: "#617a7b",
-    fontSize: 16,
-    marginTop: 2,
-    marginBottom: 8,
-  },
-
-  identifiedData: {
+  body: {
     color: "#4f696b",
-    fontSize: 14,
-    lineHeight: 21,
-  },
-
-  notFoundText: {
-    marginTop: 10,
-    color: "#9a6811",
-    fontSize: 14,
-  },
-
-  objectiveCard: {
-    borderWidth: 1,
-    borderColor: "#d3e2e0",
-    borderRadius: 16,
-    padding: 17,
-    marginBottom: 12,
-  },
-
-  objectiveCardActive: {
-    borderColor: "#0d887d",
-    backgroundColor: "#daf1ed",
-  },
-
-  objectiveTitle: {
-    color: "#173b40",
-    fontWeight: "800",
-    fontSize: 18,
-    marginBottom: 6,
-  },
-
-  objectiveTitleActive: {
-    color: "#0d887d",
-  },
-
-  objectiveDescription: {
-    color: "#617a7b",
-    fontSize: 15,
-    lineHeight: 22,
-  },
-
-  detectionCard: {
-    backgroundColor: "#173b40",
-    borderRadius: 20,
-    padding: 22,
-    marginBottom: 22,
-  },
-
-  detectionLabel: {
-    color: "#8ddbd0",
-    fontWeight: "800",
-    fontSize: 13,
-    marginBottom: 7,
-  },
-
-  detectionTitle: {
-    color: "#ffffff",
-    fontSize: 25,
-    fontWeight: "800",
-    marginBottom: 9,
-  },
-
-  detectionText: {
-    color: "#d8e9e8",
-    fontSize: 16,
-    lineHeight: 24,
-  },
-
-  detectedBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#daf1ed",
-    borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    marginTop: 15,
-  },
-
-  detectedBadgeText: {
-    color: "#0d746b",
-    fontWeight: "800",
-    fontSize: 13,
-  },
-
-  pendingBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#fff0c7",
-    borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    marginTop: 15,
-  },
-
-  pendingBadgeText: {
-    color: "#805a08",
-    fontWeight: "800",
-    fontSize: 13,
-  },
-
-  analysisCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#d5e4e2",
-    padding: 20,
-    marginBottom: 22,
-  },
-
-  analysisLabel: {
-    color: "#0d887d",
-    fontWeight: "800",
-    fontSize: 13,
-    marginBottom: 6,
-  },
-
-  analysisTitle: {
-    color: "#173b40",
-    fontSize: 24,
-    fontWeight: "800",
-    marginBottom: 10,
-  },
-
-  analysisResult: {
-    color: "#0d887d",
-    fontSize: 18,
-    fontWeight: "800",
-    marginTop: 14,
-    marginBottom: 8,
-  },
-
-  analysisText: {
-    color: "#4f696b",
-    fontSize: 16,
-    lineHeight: 24,
-  },
-
-  pendingAnalysis: {
-    backgroundColor: "#fff6df",
-    borderRadius: 15,
-    padding: 16,
-  },
-
-  pendingAnalysisTitle: {
-    color: "#805a08",
-    fontWeight: "800",
-    fontSize: 17,
-    marginBottom: 7,
-  },
-
-  pendingAnalysisText: {
-    color: "#6c562b",
     fontSize: 15,
     lineHeight: 23,
   },
 
-  calculationCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#0d887d",
-    padding: 20,
-    marginBottom: 22,
+  optionCard: {
+    borderWidth: 1,
+    borderColor: "#d3e2e0",
+    borderRadius: 14,
+    padding: 15,
+    marginBottom: 10,
   },
 
-  calculationLabel: {
-    color: "#0d887d",
+  optionActive: {
+    borderColor: "#0d887d",
+    backgroundColor: "#daf1ed",
+  },
+
+  optionTitle: {
+    fontSize: 17,
     fontWeight: "800",
-    fontSize: 13,
+    color: "#173b40",
+    marginBottom: 5,
+  },
+
+  optionText: {
+    color: "#617a7b",
+    lineHeight: 21,
+  },
+
+  detectionCard: {
+    backgroundColor: "#173b40",
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 20,
+  },
+
+  detectionLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#8ddbd0",
     marginBottom: 6,
   },
 
-  calculationTitle: {
-    color: "#173b40",
-    fontSize: 24,
+  detectionTitle: {
+    color: "#ffffff",
+    fontSize: 23,
     fontWeight: "800",
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+
+  detectionText: {
+    color: "#d8e9e8",
+    lineHeight: 23,
+  },
+
+  resultText: {
+    color: "#0d887d",
+    fontWeight: "800",
+    fontSize: 17,
+    marginVertical: 8,
+  },
+
+  warningInside: {
+    backgroundColor: "#fff6df",
+    borderRadius: 13,
+    padding: 14,
+    marginTop: 12,
   },
 
   methodRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 12,
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
   },
 
   methodButton: {
-    flex: 1,
+    flexGrow: 1,
+    minWidth: "30%",
     borderWidth: 1,
     borderColor: "#cddfdd",
-    borderRadius: 13,
-    paddingVertical: 13,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: "center",
-    backgroundColor: "#ffffff",
   },
 
   methodButtonActive: {
@@ -1474,13 +1330,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
 
-  methodExplanation: {
-    color: "#617a7b",
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 10,
-  },
-
   valueRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1490,27 +1339,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  inputSuffix: {
+  suffix: {
     marginLeft: 10,
     color: "#617a7b",
     fontWeight: "700",
-    fontSize: 16,
   },
 
   unitRow: {
     flexDirection: "row",
     gap: 8,
-    flexWrap: "wrap",
     marginTop: 10,
+    flexWrap: "wrap",
   },
 
   unitButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#cddfdd",
-    backgroundColor: "#ffffff",
+    borderRadius: 11,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
   },
 
   unitButtonActive: {
@@ -1527,187 +1374,127 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
 
-  calculationSteps: {
+  helper: {
+    color: "#617a7b",
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 10,
+  },
+
+  calculationBox: {
     backgroundColor: "#f4f9f8",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 18,
+    borderRadius: 14,
+    padding: 15,
+    marginTop: 16,
   },
 
-  calculationStepTitle: {
+  calculationTitle: {
     color: "#173b40",
-    fontSize: 17,
     fontWeight: "800",
-    marginBottom: 7,
-    marginTop: 7,
+    fontSize: 16,
+    marginTop: 8,
+    marginBottom: 6,
   },
 
-  calculationEquation: {
+  equation: {
     color: "#0d887d",
-    fontSize: 18,
     fontWeight: "800",
+    fontSize: 17,
     marginBottom: 5,
   },
 
-  calculationValue: {
-    color: "#4f696b",
-    fontSize: 16,
-    lineHeight: 23,
-  },
-
-  calculationStrong: {
+  strong: {
     color: "#173b40",
+    fontWeight: "800",
     fontSize: 17,
-    fontWeight: "800",
-    marginTop: 5,
-    marginBottom: 12,
+    marginBottom: 8,
   },
 
-  finalCalculation: {
+  finalResult: {
     backgroundColor: "#0d887d",
-    borderRadius: 17,
-    padding: 18,
-    marginTop: 16,
+    borderRadius: 15,
+    padding: 17,
+    marginTop: 14,
   },
 
-  finalCalculationLabel: {
+  finalLabel: {
     color: "#d9f4ef",
-    fontWeight: "800",
     fontSize: 12,
-    marginBottom: 7,
-  },
-
-  finalCalculationMass: {
-    color: "#ffffff",
-    fontSize: 25,
     fontWeight: "800",
     marginBottom: 7,
   },
 
-  finalCalculationText: {
-    color: "#e6f7f4",
-    fontSize: 16,
-    lineHeight: 23,
+  finalText: {
+    color: "#ffffff",
+    fontSize: 19,
+    lineHeight: 27,
+    fontWeight: "700",
   },
 
-  calculationError: {
+  errorBox: {
     backgroundColor: "#fff6df",
-    padding: 16,
-    borderRadius: 15,
-    marginTop: 16,
+    borderRadius: 14,
+    padding: 15,
+    marginTop: 15,
   },
 
-  calculationErrorTitle: {
-    color: "#805a08",
-    fontWeight: "800",
-    fontSize: 17,
-    marginBottom: 6,
-  },
-
-  calculationErrorText: {
-    color: "#6c562b",
-    fontSize: 15,
-    lineHeight: 22,
-  },
-
-  volumeNote: {
-    backgroundColor: "#e0f4f0",
-    borderRadius: 15,
-    padding: 16,
-    marginTop: 16,
-  },
-
-  volumeNoteTitle: {
-    color: "#173b40",
-    fontWeight: "800",
-    fontSize: 17,
-    marginBottom: 6,
-  },
-
-  volumeNoteText: {
-    color: "#4f696b",
-    fontSize: 15,
-    lineHeight: 23,
-  },
-
-  resultCard: {
+  planCard: {
     backgroundColor: "#0d887d",
-    borderRadius: 20,
-    padding: 22,
-    marginBottom: 22,
-  },
-
-  resultLabel: {
-    color: "#d9f4ef",
-    fontWeight: "800",
-    fontSize: 14,
-    marginBottom: 8,
-  },
-
-  resultTitle: {
-    color: "#ffffff",
-    fontSize: 26,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-
-  resultDescription: {
-    color: "#e6f7f4",
-    fontSize: 17,
-    lineHeight: 25,
-  },
-
-  card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#d5e4e2",
+    borderRadius: 18,
     padding: 20,
     marginBottom: 20,
   },
 
+  planLabel: {
+    color: "#d9f4ef",
+    fontSize: 12,
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+
+  planTitle: {
+    color: "#ffffff",
+    fontWeight: "800",
+    fontSize: 23,
+    marginBottom: 8,
+  },
+
+  planText: {
+    color: "#e6f7f4",
+    lineHeight: 23,
+  },
+
   materialRow: {
     flexDirection: "row",
-    marginBottom: 16,
-  },
-
-  bullet: {
-    color: "#0d887d",
-    fontSize: 22,
-    marginRight: 10,
-  },
-
-  materialContent: {
-    flex: 1,
+    marginBottom: 14,
   },
 
   materialName: {
     color: "#173b40",
     fontWeight: "800",
-    fontSize: 17,
+    fontSize: 16,
     marginBottom: 3,
   },
 
-  materialReason: {
-    color: "#617a7b",
-    fontSize: 15,
-    lineHeight: 22,
+  bullet: {
+    color: "#0d887d",
+    marginRight: 10,
+    fontSize: 20,
   },
 
   step: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 18,
+    marginBottom: 15,
   },
 
   stepNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: "#daf1ed",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 10,
   },
 
   stepNumberText: {
@@ -1718,88 +1505,49 @@ const styles = StyleSheet.create({
   stepText: {
     flex: 1,
     color: "#4f696b",
-    fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 22,
   },
 
   warningCard: {
     backgroundColor: "#fff6df",
     borderWidth: 1,
     borderColor: "#ddb85e",
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 20,
-  },
-
-  warningInside: {
-    backgroundColor: "#fff6df",
     borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: "#ddb85e",
+    padding: 17,
+    marginBottom: 18,
   },
 
   warningTitle: {
     color: "#805a08",
     fontWeight: "800",
-    fontSize: 18,
-    marginBottom: 8,
+    fontSize: 17,
+    marginBottom: 7,
   },
 
   warningText: {
     color: "#6c562b",
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 4,
-  },
-
-  infoCard: {
-    backgroundColor: "#e0f4f0",
-    borderRadius: 18,
-    padding: 20,
-  },
-
-  infoInside: {
-    backgroundColor: "#e0f4f0",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-  },
-
-  infoTitle: {
-    color: "#173b40",
-    fontSize: 19,
-    fontWeight: "800",
-    marginBottom: 9,
-  },
-
-  infoText: {
-    color: "#4f696b",
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 8,
+    lineHeight: 22,
   },
 
   pendingCard: {
     backgroundColor: "#ffffff",
-    borderRadius: 18,
-    padding: 20,
     borderWidth: 1,
     borderColor: "#d3e2e0",
-    marginBottom: 20,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 18,
   },
 
   pendingTitle: {
     color: "#173b40",
     fontWeight: "800",
-    fontSize: 20,
-    marginBottom: 8,
+    fontSize: 19,
+    marginBottom: 7,
   },
 
-  pendingText: {
-    color: "#617a7b",
-    fontSize: 16,
-    lineHeight: 24,
+  infoCard: {
+    backgroundColor: "#e0f4f0",
+    borderRadius: 16,
+    padding: 18,
   },
 });
