@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+
 import {
     Pressable,
     ScrollView,
@@ -19,7 +20,10 @@ import { classifyMixture } from "../chemistry/classifyMixture";
 
 import {
     calculateConcentrationPreparation,
+    getConcentrationMethodLabel,
+    getConcentrationUnit,
     type ConcentrationMethod,
+    type ConcentrationPreparationResponse,
 } from "../chemistry/concentrationPreparation";
 
 import { inferPreparationType } from "../chemistry/inferPreparationType";
@@ -55,6 +59,10 @@ export default function PreparacionLaboratorioScreen() {
   const [solventMassInput, setSolventMassInput] = useState("500");
 
   const [solventMassUnit, setSolventMassUnit] = useState<"g" | "kg">("g");
+
+  const [finalMassInput, setFinalMassInput] = useState("500");
+
+  const [finalMassUnit, setFinalMassUnit] = useState<"g" | "kg">("g");
 
   const cantidadNumerica = Number(cantidadFinal.replace(",", "."));
 
@@ -129,11 +137,7 @@ export default function PreparacionLaboratorioScreen() {
   }, [component1, component2]);
 
   const mixtureAnalysis = useMemo(() => {
-    if (!component1 || !component2) {
-      return null;
-    }
-
-    if (!waterBasedInteraction) {
+    if (!component1 || !component2 || !waterBasedInteraction) {
       return null;
     }
 
@@ -202,65 +206,218 @@ export default function PreparacionLaboratorioScreen() {
     return null;
   }, [component1, component2, objective, mixtureAnalysis]);
 
-  const concentrationCalculation = useMemo(() => {
-    if (!aqueousSolidSolute) {
+  const isLiquidLiquid =
+    component1?.physicalState === "liquid" &&
+    component2?.physicalState === "liquid";
+
+  const percentageComponent = useMemo(() => {
+    if (aqueousSolidSolute) {
+      return aqueousSolidSolute;
+    }
+
+    if (!isLiquidLiquid || !component1 || !component2) {
       return null;
     }
 
-    if (!concentrationInput.trim()) {
+    if (component1.formula === "H2O") {
+      return component2;
+    }
+
+    if (component2.formula === "H2O") {
+      return component1;
+    }
+
+    return component1;
+  }, [aqueousSolidSolute, isLiquidLiquid, component1, component2]);
+
+  const otherComponent = useMemo(() => {
+    if (!percentageComponent || !component1 || !component2) {
       return null;
     }
 
-    if (concentrationMethod === "molarity") {
-      if (unidadFinal !== "mL" && unidadFinal !== "L") {
+    if (percentageComponent.formula === component1.formula) {
+      return component2;
+    }
+
+    return component1;
+  }, [percentageComponent, component1, component2]);
+
+  const availableMethods = useMemo<ConcentrationMethod[]>(() => {
+    if (aqueousSolidSolute) {
+      return [
+        "molarity",
+        "molality",
+        "normality",
+        "massMassPercentage",
+        "massVolumePercentage",
+      ];
+    }
+
+    if (isLiquidLiquid && pairInteraction?.interaction === "miscible") {
+      return ["volumeVolumePercentage"];
+    }
+
+    return [];
+  }, [aqueousSolidSolute, isLiquidLiquid, pairInteraction]);
+
+  useEffect(() => {
+    if (
+      availableMethods.length > 0 &&
+      !availableMethods.includes(concentrationMethod)
+    ) {
+      setConcentrationMethod(availableMethods[0]);
+    }
+  }, [availableMethods, concentrationMethod]);
+
+  useEffect(() => {
+    const requiresVolume =
+      concentrationMethod === "molarity" ||
+      concentrationMethod === "normality" ||
+      concentrationMethod === "massVolumePercentage" ||
+      concentrationMethod === "volumeVolumePercentage";
+
+    if (requiresVolume && unidadFinal !== "mL" && unidadFinal !== "L") {
+      setUnidadFinal("mL");
+    }
+  }, [concentrationMethod, unidadFinal]);
+
+  const concentrationCalculation =
+    useMemo<ConcentrationPreparationResponse | null>(() => {
+      if (availableMethods.length === 0 || !concentrationInput.trim()) {
+        return null;
+      }
+
+      if (concentrationMethod === "molarity") {
+        if (
+          !aqueousSolidSolute ||
+          (unidadFinal !== "mL" && unidadFinal !== "L")
+        ) {
+          return {
+            method: "molarity",
+            error:
+              "La molaridad requiere una solución y un volumen final expresado en mL o L.",
+          };
+        }
+
+        return calculateConcentrationPreparation({
+          method: "molarity",
+          formula: aqueousSolidSolute.formula,
+          concentration: concentrationInput,
+          volume: cantidadFinal,
+          volumeUnit: unidadFinal,
+        });
+      }
+
+      if (concentrationMethod === "molality") {
+        if (!aqueousSolidSolute) {
+          return {
+            method: "molality",
+            error:
+              "La molalidad necesita identificar el soluto y la masa del solvente.",
+          };
+        }
+
+        return calculateConcentrationPreparation({
+          method: "molality",
+          formula: aqueousSolidSolute.formula,
+          concentration: concentrationInput,
+          solventMass: solventMassInput,
+          solventMassUnit,
+        });
+      }
+
+      if (concentrationMethod === "normality") {
+        if (
+          !aqueousSolidSolute ||
+          (unidadFinal !== "mL" && unidadFinal !== "L")
+        ) {
+          return {
+            method: "normality",
+            error:
+              "La normalidad requiere una solución y un volumen final expresado en mL o L.",
+          };
+        }
+
+        return calculateConcentrationPreparation({
+          method: "normality",
+          formula: aqueousSolidSolute.formula,
+          concentration: concentrationInput,
+          volume: cantidadFinal,
+          volumeUnit: unidadFinal,
+        });
+      }
+
+      if (concentrationMethod === "massMassPercentage") {
+        if (!percentageComponent) {
+          return {
+            method: "massMassPercentage",
+            error:
+              "QuimiLab necesita identificar el componente cuyo porcentaje se desea calcular.",
+          };
+        }
+
+        return calculateConcentrationPreparation({
+          method: "massMassPercentage",
+          component: percentageComponent.formula,
+          concentration: concentrationInput,
+          finalMass: finalMassInput,
+          massUnit: finalMassUnit,
+        });
+      }
+
+      if (concentrationMethod === "massVolumePercentage") {
+        if (
+          !aqueousSolidSolute ||
+          (unidadFinal !== "mL" && unidadFinal !== "L")
+        ) {
+          return {
+            method: "massVolumePercentage",
+            error:
+              "El porcentaje m/v requiere un componente expresado en masa y un volumen final en mL o L.",
+          };
+        }
+
+        return calculateConcentrationPreparation({
+          method: "massVolumePercentage",
+          component: aqueousSolidSolute.formula,
+          concentration: concentrationInput,
+          finalVolume: cantidadFinal,
+          volumeUnit: unidadFinal,
+        });
+      }
+
+      if (!percentageComponent || unidadFinal === "g" || unidadFinal === "kg") {
         return {
-          method: "molarity" as const,
-          error: "La molaridad requiere un volumen final expresado en mL o L.",
+          method: "volumeVolumePercentage",
+          error:
+            "El porcentaje v/v requiere un componente líquido y un volumen final expresado en mL o L.",
         };
       }
 
       return calculateConcentrationPreparation({
-        method: "molarity",
-        formula: aqueousSolidSolute.formula,
+        method: "volumeVolumePercentage",
+        component: percentageComponent.formula,
         concentration: concentrationInput,
-        volume: cantidadFinal,
+        finalVolume: cantidadFinal,
         volumeUnit: unidadFinal,
       });
-    }
+    }, [
+      availableMethods,
+      concentrationMethod,
+      concentrationInput,
+      aqueousSolidSolute,
+      percentageComponent,
+      cantidadFinal,
+      unidadFinal,
+      solventMassInput,
+      solventMassUnit,
+      finalMassInput,
+      finalMassUnit,
+    ]);
 
-    if (concentrationMethod === "molality") {
-      return calculateConcentrationPreparation({
-        method: "molality",
-        formula: aqueousSolidSolute.formula,
-        concentration: concentrationInput,
-        solventMass: solventMassInput,
-        solventMassUnit,
-      });
-    }
-
-    if (unidadFinal !== "mL" && unidadFinal !== "L") {
-      return {
-        method: "normality" as const,
-        error: "La normalidad requiere un volumen final expresado en mL o L.",
-      };
-    }
-
-    return calculateConcentrationPreparation({
-      method: "normality",
-      formula: aqueousSolidSolute.formula,
-      concentration: concentrationInput,
-      volume: cantidadFinal,
-      volumeUnit: unidadFinal,
-    });
-  }, [
-    aqueousSolidSolute,
-    concentrationMethod,
-    concentrationInput,
-    cantidadFinal,
-    unidadFinal,
-    solventMassInput,
-    solventMassUnit,
-  ]);
+  const concentrationUsesMassBasis =
+    concentrationMethod === "molality" ||
+    concentrationMethod === "massMassPercentage";
 
   const basePlan = useMemo(() => {
     if (!automaticPreparation.type) {
@@ -285,14 +442,14 @@ export default function PreparacionLaboratorioScreen() {
       type: automaticPreparation.type,
 
       finalAmount:
-        concentrationMethod === "molality" && aqueousSolidSolute
+        concentrationUsesMassBasis && availableMethods.length > 0
           ? undefined
           : Number.isFinite(cantidadNumerica) && cantidadNumerica > 0
             ? cantidadNumerica
             : undefined,
 
       finalUnit:
-        concentrationMethod === "molality" && aqueousSolidSolute
+        concentrationUsesMassBasis && availableMethods.length > 0
           ? undefined
           : unidadFinal,
 
@@ -310,25 +467,19 @@ export default function PreparacionLaboratorioScreen() {
     });
   }, [
     automaticPreparation,
-    concentrationMethod,
-    aqueousSolidSolute,
+    mixtureAnalysis,
+    liquidLiquidBehavior,
+    concentrationUsesMassBasis,
+    availableMethods,
     cantidadNumerica,
     unidadFinal,
     safetyLevel,
-    mixtureAnalysis,
-    liquidLiquidBehavior,
   ]);
 
   const molalityPlan = useMemo<PreparationPlan | null>(() => {
-    if (!aqueousSolidSolute || concentrationMethod !== "molality") {
-      return null;
-    }
-
-    if (safetyLevel === "highPrecaution") {
-      return null;
-    }
-
     if (
+      concentrationMethod !== "molality" ||
+      safetyLevel === "highPrecaution" ||
       !concentrationCalculation ||
       "error" in concentrationCalculation ||
       concentrationCalculation.method !== "molality"
@@ -342,7 +493,7 @@ export default function PreparacionLaboratorioScreen() {
       title: "Preparación de una solución por molalidad",
 
       description:
-        "La molalidad se basa en los moles de soluto por kilogramo de solvente. La preparación se realiza por masa y no completando hasta un volumen final.",
+        "La preparación se realiza utilizando la masa del solvente y la masa de soluto calculada.",
 
       equipmentIds: [
         "balance",
@@ -353,38 +504,83 @@ export default function PreparacionLaboratorioScreen() {
       ],
 
       steps: [
-        "Reuní todos los materiales necesarios antes de comenzar.",
-
+        "Reuní todos los materiales necesarios.",
         "Colocá un recipiente limpio y seco sobre la balanza y tará la balanza.",
-
         `Pesá ${formatNumber(
           result.solventMass,
         )} ${result.solventMassUnit} de agua.`,
-
         "Utilizá otro recipiente adecuado para pesar el soluto.",
-
         `Pesá ${formatNumber(result.gramsNeeded, 2)} g de ${result.formula}.`,
-
         "Agregá gradualmente el soluto al solvente pesado.",
-
         "Mezclá hasta lograr la disolución cuando sea químicamente posible.",
-
-        "Verificá que no quede material adherido al recipiente utilizado para pesar el soluto.",
-
         "Homogeneizá la preparación.",
-
-        `Rotulá indicando ${result.formula}, molalidad ${formatNumber(
+        `Rotulá indicando ${result.formula}, ${formatNumber(
           result.molality,
-        )} mol/kg, masa de solvente utilizada y fecha.`,
+        )} mol/kg y fecha.`,
       ],
 
       warnings: [
         "La masa de solvente no es la masa total de la solución.",
+        "La molalidad no utiliza el volumen final.",
+        "No corresponde completar hasta la marca de un matraz aforado.",
+        ...(safetyLevel === "supervision"
+          ? ["Esta preparación requiere supervisión docente."]
+          : []),
+      ],
 
-        "La molalidad no utiliza el volumen final de la solución como base de cálculo.",
+      canShowAutonomousProcedure: true,
+    };
+  }, [concentrationMethod, safetyLevel, concentrationCalculation]);
 
-        "No corresponde completar la preparación hasta la marca de un matraz aforado.",
+  const massMassPlan = useMemo<PreparationPlan | null>(() => {
+    if (
+      concentrationMethod !== "massMassPercentage" ||
+      safetyLevel === "highPrecaution" ||
+      !concentrationCalculation ||
+      "error" in concentrationCalculation ||
+      concentrationCalculation.method !== "massMassPercentage"
+    ) {
+      return null;
+    }
 
+    const result = concentrationCalculation.result;
+
+    return {
+      title: "Preparación por porcentaje masa en masa",
+
+      description:
+        "La preparación se realiza por pesada de los componentes hasta obtener la masa final indicada.",
+
+      equipmentIds: [
+        "balance",
+        "spatula",
+        "weighing-container",
+        "beaker",
+        "glass-rod",
+      ],
+
+      steps: [
+        "Reuní los materiales necesarios.",
+        "Colocá el recipiente para pesada sobre la balanza y tará la balanza.",
+        `Pesá ${formatNumber(result.componentAmountBase, 2)} g de ${
+          percentageComponent?.name ?? result.component
+        }.`,
+        result.remainingAmountBase !== undefined
+          ? `Pesá ${formatNumber(result.remainingAmountBase, 2)} g de ${
+              otherComponent?.name ?? "los demás componentes"
+            }.`
+          : "Determiná la masa restante de los demás componentes.",
+        "Transferí los componentes a un recipiente adecuado.",
+        "Mezclá y homogeneizá la preparación.",
+        "Verificá que la masa total corresponda a la masa final indicada.",
+        `Rotulá indicando ${
+          percentageComponent?.name ?? result.component
+        }, ${formatNumber(result.percentage)} % m/m y fecha.`,
+      ],
+
+      warnings: [
+        "El porcentaje m/m utiliza la masa total final de la mezcla.",
+        "La masa de cada componente forma parte de esa masa final.",
         ...(safetyLevel === "supervision"
           ? ["Esta preparación requiere supervisión docente."]
           : []),
@@ -393,15 +589,141 @@ export default function PreparacionLaboratorioScreen() {
       canShowAutonomousProcedure: true,
     };
   }, [
-    aqueousSolidSolute,
     concentrationMethod,
     safetyLevel,
     concentrationCalculation,
+    percentageComponent,
+    otherComponent,
+  ]);
+
+  const massVolumePlan = useMemo<PreparationPlan | null>(() => {
+    if (
+      concentrationMethod !== "massVolumePercentage" ||
+      safetyLevel === "highPrecaution" ||
+      !concentrationCalculation ||
+      "error" in concentrationCalculation ||
+      concentrationCalculation.method !== "massVolumePercentage"
+    ) {
+      return null;
+    }
+
+    const result = concentrationCalculation.result;
+
+    return {
+      title: "Preparación por porcentaje masa en volumen",
+
+      description:
+        "Se pesa el soluto y luego se completa la solución hasta alcanzar el volumen final indicado.",
+
+      equipmentIds: [
+        "balance",
+        "spatula",
+        "weighing-container",
+        "beaker",
+        "glass-rod",
+        "funnel",
+        "volumetric-flask",
+        "wash-bottle",
+      ],
+
+      steps: [
+        "Reuní todos los materiales necesarios.",
+        "Colocá un recipiente para pesada sobre la balanza y tará la balanza.",
+        `Pesá ${formatNumber(result.componentAmountBase, 2)} g de ${
+          percentageComponent?.name ?? result.component
+        }.`,
+        "Colocá una cantidad de solvente menor al volumen final en un vaso de precipitados.",
+        "Agregá el soluto y mezclá hasta lograr la disolución cuando sea posible.",
+        "Transferí la solución al matraz aforado.",
+        "Enjuagá el vaso y agregá los lavados al matraz.",
+        `Completá cuidadosamente hasta el volumen final de ${formatNumber(
+          result.finalAmount,
+        )} ${result.finalUnit}.`,
+        "Tapá y homogeneizá.",
+        `Rotulá indicando ${
+          percentageComponent?.name ?? result.component
+        }, ${formatNumber(result.percentage)} % m/v y fecha.`,
+      ],
+
+      warnings: [
+        "El volumen indicado es el volumen final de la solución.",
+        "No significa agregar el soluto a esa cantidad inicial de solvente.",
+        ...(safetyLevel === "supervision"
+          ? ["Esta preparación requiere supervisión docente."]
+          : []),
+      ],
+
+      canShowAutonomousProcedure: true,
+    };
+  }, [
+    concentrationMethod,
+    safetyLevel,
+    concentrationCalculation,
+    percentageComponent,
+  ]);
+
+  const volumeVolumePlan = useMemo<PreparationPlan | null>(() => {
+    if (
+      concentrationMethod !== "volumeVolumePercentage" ||
+      safetyLevel === "highPrecaution" ||
+      !concentrationCalculation ||
+      "error" in concentrationCalculation ||
+      concentrationCalculation.method !== "volumeVolumePercentage"
+    ) {
+      return null;
+    }
+
+    const result = concentrationCalculation.result;
+
+    return {
+      title: "Preparación por porcentaje volumen en volumen",
+
+      description:
+        "Se mide el volumen del componente líquido y se completa la preparación hasta alcanzar el volumen final indicado.",
+
+      equipmentIds: [
+        "graduated-cylinder",
+        "volumetric-pipette",
+        "pipette-filler",
+        "volumetric-flask",
+      ],
+
+      steps: [
+        "Reuní el material volumétrico necesario.",
+        `Medí ${formatNumber(result.componentAmountBase, 2)} mL de ${
+          percentageComponent?.name ?? result.component
+        }.`,
+        "Transferí el componente al recipiente volumétrico adecuado.",
+        "Agregá parcialmente el segundo componente.",
+        `Completá cuidadosamente hasta alcanzar un volumen final de ${formatNumber(
+          result.finalAmount,
+        )} ${result.finalUnit}.`,
+        "Tapá y homogeneizá la preparación.",
+        "Verificá que la mezcla permanezca en una única fase cuando corresponda.",
+        `Rotulá indicando ${
+          percentageComponent?.name ?? result.component
+        }, ${formatNumber(result.percentage)} % v/v y fecha.`,
+      ],
+
+      warnings: [
+        "No debe suponerse que el volumen del segundo componente es simplemente el volumen final menos el volumen del primero.",
+        "Los volúmenes de dos líquidos no siempre son perfectamente aditivos.",
+        ...(safetyLevel === "supervision"
+          ? ["Esta preparación requiere supervisión docente."]
+          : []),
+      ],
+
+      canShowAutonomousProcedure: true,
+    };
+  }, [
+    concentrationMethod,
+    safetyLevel,
+    concentrationCalculation,
+    percentageComponent,
   ]);
 
   const plan = useMemo(() => {
     if (
-      aqueousSolidSolute &&
       safetyLevel !== "highPrecaution" &&
       concentrationCalculation &&
       "error" in concentrationCalculation
@@ -409,22 +731,35 @@ export default function PreparacionLaboratorioScreen() {
       return null;
     }
 
-    if (aqueousSolidSolute && concentrationMethod === "molality") {
-      if (safetyLevel === "highPrecaution") {
-        return basePlan;
-      }
-
-      return molalityPlan;
+    if (safetyLevel === "highPrecaution") {
+      return basePlan;
     }
 
-    return basePlan;
+    switch (concentrationMethod) {
+      case "molality":
+        return molalityPlan ?? basePlan;
+
+      case "massMassPercentage":
+        return massMassPlan ?? basePlan;
+
+      case "massVolumePercentage":
+        return massVolumePlan ?? basePlan;
+
+      case "volumeVolumePercentage":
+        return volumeVolumePlan ?? basePlan;
+
+      default:
+        return basePlan;
+    }
   }, [
-    aqueousSolidSolute,
-    concentrationMethod,
     safetyLevel,
     concentrationCalculation,
+    concentrationMethod,
     basePlan,
     molalityPlan,
+    massMassPlan,
+    massVolumePlan,
+    volumeVolumePlan,
   ]);
 
   const materiales = plan
@@ -434,10 +769,6 @@ export default function PreparacionLaboratorioScreen() {
           (item): item is (typeof labEquipment)[number] => item !== undefined,
         )
     : [];
-
-  const isLiquidLiquid =
-    component1?.physicalState === "liquid" &&
-    component2?.physicalState === "liquid";
 
   return (
     <>
@@ -455,8 +786,8 @@ export default function PreparacionLaboratorioScreen() {
         <Text style={styles.title}>Preparación de laboratorio</Text>
 
         <Text style={styles.subtitle}>
-          Ingresá los componentes. QuimiLab analiza las sustancias, selecciona
-          el método de preparación y realiza los cálculos correspondientes.
+          Ingresá los componentes. QuimiLab analiza las sustancias, determina el
+          tipo de preparación y selecciona los cálculos y materiales adecuados.
         </Text>
 
         <SubstanceInputCard
@@ -533,6 +864,16 @@ export default function PreparacionLaboratorioScreen() {
                   </Text>
 
                   <Text style={styles.body}>{pairInteraction.description}</Text>
+
+                  {pairInteraction.warning ? (
+                    <View style={styles.warningInside}>
+                      <Text style={styles.warningTitle}>Seguridad</Text>
+
+                      <Text style={styles.warningText}>
+                        {pairInteraction.warning}
+                      </Text>
+                    </View>
+                  ) : null}
                 </>
               ) : (
                 <Text style={styles.body}>
@@ -577,7 +918,7 @@ export default function PreparacionLaboratorioScreen() {
           </View>
         )}
 
-        {aqueousSolidSolute ? (
+        {availableMethods.length > 0 ? (
           <View style={styles.concentrationCard}>
             <Text style={styles.smallLabel}>CONCENTRACIÓN</Text>
 
@@ -586,13 +927,7 @@ export default function PreparacionLaboratorioScreen() {
             </Text>
 
             <View style={styles.methodRow}>
-              {(
-                [
-                  ["molarity", "Molaridad"],
-                  ["molality", "Molalidad"],
-                  ["normality", "Normalidad"],
-                ] as const
-              ).map(([method, label]) => (
+              {availableMethods.map((method) => (
                 <Pressable
                   key={method}
                   style={[
@@ -607,18 +942,14 @@ export default function PreparacionLaboratorioScreen() {
                       concentrationMethod === method && styles.methodTextActive,
                     ]}
                   >
-                    {label}
+                    {getConcentrationMethodLabel(method)}
                   </Text>
                 </Pressable>
               ))}
             </View>
 
             <Text style={styles.label}>
-              {concentrationMethod === "molarity"
-                ? "Molaridad deseada"
-                : concentrationMethod === "molality"
-                  ? "Molalidad deseada"
-                  : "Normalidad deseada"}
+              {getConcentrationPrompt(concentrationMethod)}
             </Text>
 
             <View style={styles.valueRow}>
@@ -627,15 +958,13 @@ export default function PreparacionLaboratorioScreen() {
                 onChangeText={setConcentrationInput}
                 keyboardType="decimal-pad"
                 style={[styles.input, styles.flexInput]}
-                placeholder="0,5"
+                placeholder={
+                  concentrationMethod.includes("Percentage") ? "10" : "0,5"
+                }
               />
 
               <Text style={styles.suffix}>
-                {concentrationMethod === "molarity"
-                  ? "mol/L"
-                  : concentrationMethod === "molality"
-                    ? "mol/kg"
-                    : "eq/L"}
+                {getConcentrationUnit(concentrationMethod)}
               </Text>
             </View>
 
@@ -673,13 +1002,49 @@ export default function PreparacionLaboratorioScreen() {
                 </View>
 
                 <Text style={styles.helper}>
-                  La molalidad utiliza masa de solvente. No utiliza volumen
-                  final.
+                  La molalidad utiliza masa de solvente, no volumen final.
+                </Text>
+              </>
+            ) : concentrationMethod === "massMassPercentage" ? (
+              <>
+                <Text style={styles.label}>Masa final de la mezcla</Text>
+
+                <TextInput
+                  value={finalMassInput}
+                  onChangeText={setFinalMassInput}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                />
+
+                <View style={styles.unitRow}>
+                  {(["g", "kg"] as const).map((unit) => (
+                    <Pressable
+                      key={unit}
+                      style={[
+                        styles.unitButton,
+                        finalMassUnit === unit && styles.unitButtonActive,
+                      ]}
+                      onPress={() => setFinalMassUnit(unit)}
+                    >
+                      <Text
+                        style={[
+                          styles.unitText,
+                          finalMassUnit === unit && styles.unitTextActive,
+                        ]}
+                      >
+                        {unit}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Text style={styles.helper}>
+                  % m/m utiliza la masa total final de la mezcla.
                 </Text>
               </>
             ) : (
               <>
-                <Text style={styles.label}>Volumen final de solución</Text>
+                <Text style={styles.label}>Volumen final</Text>
 
                 <TextInput
                   value={cantidadFinal}
@@ -711,29 +1076,16 @@ export default function PreparacionLaboratorioScreen() {
                 </View>
 
                 <Text style={styles.helper}>
-                  {concentrationMethod === "molarity"
-                    ? "La molaridad utiliza el volumen final de la solución."
-                    : "La normalidad utiliza equivalentes por litro de solución y depende de la reacción considerada."}
+                  {getMethodExplanation(concentrationMethod)}
                 </Text>
               </>
             )}
 
             {concentrationCalculation ? (
-              "error" in concentrationCalculation ? (
-                <View style={styles.errorBox}>
-                  <Text style={styles.warningTitle}>No se puede calcular</Text>
-
-                  <Text style={styles.warningText}>
-                    {concentrationCalculation.error}
-                  </Text>
-                </View>
-              ) : concentrationCalculation.method === "molarity" ? (
-                <MolarityResult result={concentrationCalculation.result} />
-              ) : concentrationCalculation.method === "molality" ? (
-                <MolalityResult result={concentrationCalculation.result} />
-              ) : (
-                <NormalityResult result={concentrationCalculation.result} />
-              )
+              <ConcentrationResultView
+                calculation={concentrationCalculation}
+                componentName={percentageComponent?.name}
+              />
             ) : null}
           </View>
         ) : (
@@ -842,9 +1194,9 @@ export default function PreparacionLaboratorioScreen() {
           <Text style={styles.sectionTitle}>¿Cómo decide QuimiLab?</Text>
 
           <Text style={styles.body}>
-            QuimiLab analiza las sustancias, la interacción entre los
-            componentes, el método de concentración y el nivel de seguridad
-            antes de generar los cálculos y el procedimiento.
+            QuimiLab analiza las sustancias, su interacción, el método de
+            concentración y el nivel de seguridad antes de generar los cálculos,
+            materiales y procedimiento.
           </Text>
         </View>
       </ScrollView>
@@ -852,160 +1204,219 @@ export default function PreparacionLaboratorioScreen() {
   );
 }
 
-function MolarityResult({
-  result,
+function ConcentrationResultView({
+  calculation,
+  componentName,
 }: {
-  result: {
-    formula: string;
-    molarity: number;
-    volume: number;
-    volumeUnit: "mL" | "L";
-    volumeLiters: number;
-    molesNeeded: number;
-    gramsNeeded: number;
-    molarMass: {
-      molarMass: number | null;
-    };
-  };
+  calculation: ConcentrationPreparationResponse;
+  componentName?: string;
 }) {
-  return (
-    <>
-      <View style={styles.calculationBox}>
-        <Text style={styles.calculationTitle}>Paso 1: calcular los moles</Text>
+  if ("error" in calculation) {
+    return (
+      <View style={styles.errorBox}>
+        <Text style={styles.warningTitle}>No se puede calcular</Text>
 
-        <Text style={styles.equation}>n = M × V</Text>
-
-        <Text style={styles.body}>
-          n = {formatNumber(result.molarity)} ×{" "}
-          {formatNumber(result.volumeLiters)} L
-        </Text>
-
-        <Text style={styles.strong}>
-          n = {formatNumber(result.molesNeeded)} mol
-        </Text>
-
-        <Text style={styles.calculationTitle}>
-          Paso 2: convertir moles a gramos
-        </Text>
-
-        <Text style={styles.equation}>masa = n × MM</Text>
+        <Text style={styles.warningText}>{calculation.error}</Text>
       </View>
+    );
+  }
 
-      <ResultBox>
-        {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
-        {"\n"}
-        para preparar {formatNumber(result.volume)} {result.volumeUnit} de
-        solución {formatNumber(result.molarity)} M
-      </ResultBox>
-    </>
-  );
-}
+  if (calculation.method === "molarity") {
+    const result = calculation.result;
 
-function MolalityResult({
-  result,
-}: {
-  result: {
-    formula: string;
-    molality: number;
-    solventMass: number;
-    solventMassUnit: "g" | "kg";
-    solventMassKg: number;
-    molesNeeded: number;
-    gramsNeeded: number;
-  };
-}) {
-  return (
-    <>
-      <View style={styles.calculationBox}>
-        <Text style={styles.calculationTitle}>Paso 1: masa de solvente</Text>
+    return (
+      <>
+        <View style={styles.calculationBox}>
+          <Text style={styles.calculationTitle}>
+            Paso 1: calcular los moles
+          </Text>
 
-        <Text style={styles.strong}>
-          {formatNumber(result.solventMassKg)} kg
-        </Text>
+          <Text style={styles.equation}>n = M × V</Text>
 
-        <Text style={styles.calculationTitle}>Paso 2: calcular moles</Text>
+          <Text style={styles.strong}>
+            n = {formatNumber(result.molesNeeded)} mol
+          </Text>
 
-        <Text style={styles.equation}>n = m × kg de solvente</Text>
+          <Text style={styles.calculationTitle}>
+            Paso 2: convertir a gramos
+          </Text>
 
-        <Text style={styles.strong}>
-          n = {formatNumber(result.molesNeeded)} mol
-        </Text>
-      </View>
-
-      <ResultBox>
-        {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
-        {"\n"}
-        con {formatNumber(result.solventMass)} {result.solventMassUnit} de
-        solvente para una molalidad de {formatNumber(result.molality)} mol/kg
-      </ResultBox>
-    </>
-  );
-}
-
-function NormalityResult({
-  result,
-}: {
-  result: {
-    formula: string;
-    normality: number;
-    volume: number;
-    volumeUnit: "mL" | "L";
-    volumeLiters: number;
-    molarity: number;
-    equivalenceFactor: number;
-    equivalentWeight: number;
-    gramsNeeded: number;
-    equivalenceExplanation: string;
-    safetyWarning?: string;
-  };
-}) {
-  return (
-    <>
-      <View style={styles.calculationBox}>
-        <Text style={styles.calculationTitle}>Factor de equivalencia</Text>
-
-        <Text style={styles.strong}>n-factor = {result.equivalenceFactor}</Text>
-
-        <Text style={styles.body}>{result.equivalenceExplanation}</Text>
-
-        <Text style={styles.calculationTitle}>Peso equivalente</Text>
-
-        <Text style={styles.equation}>PE = MM / factor</Text>
-
-        <Text style={styles.strong}>
-          PE = {formatNumber(result.equivalentWeight, 3)} g/eq
-        </Text>
-
-        <Text style={styles.calculationTitle}>Relación con la molaridad</Text>
-
-        <Text style={styles.strong}>
-          M = {formatNumber(result.molarity)} mol/L
-        </Text>
-
-        <Text style={styles.calculationTitle}>Masa necesaria</Text>
-
-        <Text style={styles.equation}>masa = N × V × PE</Text>
-      </View>
-
-      <ResultBox>
-        {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
-        {"\n"}
-        para preparar {formatNumber(result.volume)} {result.volumeUnit} de
-        solución {formatNumber(result.normality)} N
-      </ResultBox>
-
-      {result.safetyWarning ? (
-        <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>Seguridad</Text>
-
-          <Text style={styles.warningText}>{result.safetyWarning}</Text>
+          <Text style={styles.equation}>masa = n × MM</Text>
         </View>
-      ) : null}
+
+        <ResultBox>
+          {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
+          {"\n"}
+          para preparar {formatNumber(result.volume)} {result.volumeUnit} de
+          solución {formatNumber(result.molarity)} M
+        </ResultBox>
+      </>
+    );
+  }
+
+  if (calculation.method === "molality") {
+    const result = calculation.result;
+
+    return (
+      <>
+        <View style={styles.calculationBox}>
+          <Text style={styles.calculationTitle}>Masa de solvente</Text>
+
+          <Text style={styles.strong}>
+            {formatNumber(result.solventMassKg)} kg
+          </Text>
+
+          <Text style={styles.calculationTitle}>Moles necesarios</Text>
+
+          <Text style={styles.equation}>n = m × kg de solvente</Text>
+
+          <Text style={styles.strong}>
+            n = {formatNumber(result.molesNeeded)} mol
+          </Text>
+        </View>
+
+        <ResultBox>
+          {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
+          {"\n"}
+          con {formatNumber(result.solventMass)} {result.solventMassUnit} de
+          solvente
+        </ResultBox>
+      </>
+    );
+  }
+
+  if (calculation.method === "normality") {
+    const result = calculation.result;
+
+    return (
+      <>
+        <View style={styles.calculationBox}>
+          <Text style={styles.calculationTitle}>Factor de equivalencia</Text>
+
+          <Text style={styles.strong}>{result.equivalenceFactor}</Text>
+
+          <Text style={styles.body}>{result.equivalenceExplanation}</Text>
+
+          <Text style={styles.calculationTitle}>Peso equivalente</Text>
+
+          <Text style={styles.strong}>
+            {formatNumber(result.equivalentWeight, 3)} g/eq
+          </Text>
+
+          <Text style={styles.calculationTitle}>Molaridad relacionada</Text>
+
+          <Text style={styles.strong}>
+            {formatNumber(result.molarity)} mol/L
+          </Text>
+        </View>
+
+        <ResultBox>
+          {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
+          {"\n"}
+          para preparar {formatNumber(result.volume)} {result.volumeUnit} de
+          solución {formatNumber(result.normality)} N
+        </ResultBox>
+      </>
+    );
+  }
+
+  if (calculation.method === "massMassPercentage") {
+    const result = calculation.result;
+
+    return (
+      <>
+        <View style={styles.calculationBox}>
+          <Text style={styles.calculationTitle}>Masa del componente</Text>
+
+          <Text style={styles.equation}>masa = (% × masa final) / 100</Text>
+
+          <Text style={styles.strong}>
+            {formatNumber(result.componentAmountBase, 2)} g
+          </Text>
+
+          {result.remainingAmountBase !== undefined ? (
+            <>
+              <Text style={styles.calculationTitle}>Masa restante</Text>
+
+              <Text style={styles.strong}>
+                {formatNumber(result.remainingAmountBase, 2)} g
+              </Text>
+            </>
+          ) : null}
+        </View>
+
+        <ResultBox>
+          {formatNumber(result.componentAmountBase, 2)} g de{" "}
+          {componentName ?? result.component}
+          {"\n"}
+          para una preparación de {formatNumber(result.percentage)} % m/m
+        </ResultBox>
+      </>
+    );
+  }
+
+  if (calculation.method === "massVolumePercentage") {
+    const result = calculation.result;
+
+    return (
+      <>
+        <View style={styles.calculationBox}>
+          <Text style={styles.calculationTitle}>Masa de soluto</Text>
+
+          <Text style={styles.equation}>
+            masa = (% × volumen final en mL) / 100
+          </Text>
+
+          <Text style={styles.strong}>
+            {formatNumber(result.componentAmountBase, 2)} g
+          </Text>
+        </View>
+
+        <ResultBox>
+          {formatNumber(result.componentAmountBase, 2)} g de{" "}
+          {componentName ?? result.component}
+          {"\n"}
+          para preparar {formatNumber(result.finalAmount)} {result.finalUnit} al{" "}
+          {formatNumber(result.percentage)} % m/v
+        </ResultBox>
+      </>
+    );
+  }
+
+  const result = calculation.result;
+
+  return (
+    <>
+      <View style={styles.calculationBox}>
+        <Text style={styles.calculationTitle}>Volumen del componente</Text>
+
+        <Text style={styles.equation}>volumen = (% × volumen final) / 100</Text>
+
+        <Text style={styles.strong}>
+          {formatNumber(result.componentAmountBase, 2)} mL
+        </Text>
+      </View>
+
+      <ResultBox>
+        {formatNumber(result.componentAmountBase, 2)} mL de{" "}
+        {componentName ?? result.component}
+        {"\n"}
+        para preparar {formatNumber(result.finalAmount)} {result.finalUnit} al{" "}
+        {formatNumber(result.percentage)} % v/v
+      </ResultBox>
+
+      <View style={styles.helperBox}>
+        <Text style={styles.body}>
+          El volumen restante no debe calcularse automáticamente como volumen
+          final menos volumen del componente, porque los volúmenes pueden no ser
+          perfectamente aditivos.
+        </Text>
+      </View>
     </>
   );
 }
 
-function ResultBox({ children }: { children: React.ReactNode }) {
+function ResultBox({ children }: { children: ReactNode }) {
   return (
     <View style={styles.finalResult}>
       <Text style={styles.finalLabel}>RESULTADO</Text>
@@ -1063,6 +1474,47 @@ function SubstanceInputCard({
       ) : null}
     </View>
   );
+}
+
+function getConcentrationPrompt(method: ConcentrationMethod): string {
+  switch (method) {
+    case "molarity":
+      return "Molaridad deseada";
+
+    case "molality":
+      return "Molalidad deseada";
+
+    case "normality":
+      return "Normalidad deseada";
+
+    case "massMassPercentage":
+      return "Porcentaje m/m";
+
+    case "massVolumePercentage":
+      return "Porcentaje m/v";
+
+    case "volumeVolumePercentage":
+      return "Porcentaje v/v";
+  }
+}
+
+function getMethodExplanation(method: ConcentrationMethod): string {
+  switch (method) {
+    case "molarity":
+      return "La molaridad utiliza el volumen final de la solución.";
+
+    case "normality":
+      return "La normalidad depende del número de equivalentes involucrados en la reacción.";
+
+    case "massVolumePercentage":
+      return "% m/v expresa gramos de componente por cada 100 mL de solución final.";
+
+    case "volumeVolumePercentage":
+      return "% v/v expresa mililitros de componente por cada 100 mL de mezcla final.";
+
+    default:
+      return "";
+  }
 }
 
 function getPhysicalStateLabel(
@@ -1307,11 +1759,12 @@ const styles = StyleSheet.create({
   },
 
   methodButton: {
-    flexGrow: 1,
     minWidth: "30%",
+    flexGrow: 1,
     borderWidth: 1,
     borderColor: "#cddfdd",
     borderRadius: 12,
+    paddingHorizontal: 8,
     paddingVertical: 12,
     alignItems: "center",
   },
@@ -1324,6 +1777,7 @@ const styles = StyleSheet.create({
   methodText: {
     color: "#173b40",
     fontWeight: "800",
+    textAlign: "center",
   },
 
   methodTextActive: {
@@ -1381,6 +1835,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
+  helperBox: {
+    backgroundColor: "#e0f4f0",
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 12,
+  },
+
   calculationBox: {
     backgroundColor: "#f4f9f8",
     borderRadius: 14,
@@ -1426,7 +1887,7 @@ const styles = StyleSheet.create({
 
   finalText: {
     color: "#ffffff",
-    fontSize: 19,
+    fontSize: 18,
     lineHeight: 27,
     fontWeight: "700",
   },
