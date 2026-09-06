@@ -11,19 +11,27 @@ import {
 
 import {
     createLabPreparationPlan,
-    SafetyLevel,
+    type PreparationPlan,
+    type SafetyLevel,
 } from "../chemistry/labPreparation";
 
 import { classifyMixture } from "../chemistry/classifyMixture";
-import { inferPreparationType } from "../chemistry/inferPreparationType";
 
-import { calculateMolarityPreparation } from "../chemistry/molarity";
+import {
+    calculateConcentrationPreparation,
+    type ConcentrationMethod,
+} from "../chemistry/concentrationPreparation";
+
+import { inferPreparationType } from "../chemistry/inferPreparationType";
 
 import { getInteractionWithWater } from "../chemistry/substanceInteractions";
 
 import { getSubstancePairInteraction } from "../chemistry/substancePairInteractions";
 
-import { findExactSubstance, SubstanceRecord } from "../chemistry/substances";
+import {
+    findExactSubstance,
+    type SubstanceRecord,
+} from "../chemistry/substances";
 
 import { labEquipment } from "../data/labEquipment";
 
@@ -41,7 +49,14 @@ export default function PreparacionLaboratorioScreen() {
 
   const [unidadFinal, setUnidadFinal] = useState<"mL" | "L" | "g" | "kg">("mL");
 
-  const [molarityInput, setMolarityInput] = useState("0,5");
+  const [concentrationMethod, setConcentrationMethod] =
+    useState<ConcentrationMethod>("molarity");
+
+  const [concentrationInput, setConcentrationInput] = useState("0,5");
+
+  const [solventMassInput, setSolventMassInput] = useState("500");
+
+  const [solventMassUnit, setSolventMassUnit] = useState<"g" | "kg">("g");
 
   const cantidadNumerica = Number(cantidadFinal.replace(",", "."));
 
@@ -168,13 +183,6 @@ export default function PreparacionLaboratorioScreen() {
     return "unknown" as const;
   }, [pairInteraction]);
 
-  /*
-   * Determina si tenemos una solución acuosa
-   * preparada a partir de un soluto sólido.
-   *
-   * Este es el caso en el que podemos reutilizar
-   * directamente el motor de molaridad.
-   */
   const aqueousSolidSolute = useMemo(() => {
     if (
       !component1 ||
@@ -196,33 +204,50 @@ export default function PreparacionLaboratorioScreen() {
     return null;
   }, [component1, component2, objective, mixtureAnalysis]);
 
-  /*
-   * Cálculo real de preparación por molaridad.
-   * No duplicamos ninguna fórmula:
-   * reutilizamos chemistry/molarity.ts.
-   */
-  const molarityCalculation = useMemo<ReturnType<
-    typeof calculateMolarityPreparation
-  > | null>(() => {
-    if (!aqueousSolidSolute || !molarityInput.trim()) {
+  const concentrationCalculation = useMemo(() => {
+    if (!aqueousSolidSolute) {
       return null;
     }
 
-    if (unidadFinal !== "mL" && unidadFinal !== "L") {
-      return {
-        error: "La molaridad requiere expresar el volumen final en mL o L.",
-      };
+    if (!concentrationInput.trim()) {
+      return null;
     }
 
-    return calculateMolarityPreparation(
-      aqueousSolidSolute.formula,
-      molarityInput,
-      cantidadFinal,
-      unidadFinal,
-    );
-  }, [aqueousSolidSolute, molarityInput, cantidadFinal, unidadFinal]);
+    if (concentrationMethod === "molarity") {
+      if (unidadFinal !== "mL" && unidadFinal !== "L") {
+        return {
+          method: "molarity" as const,
+          error: "La molaridad requiere un volumen final expresado en mL o L.",
+        };
+      }
 
-  const plan = useMemo(() => {
+      return calculateConcentrationPreparation({
+        method: "molarity",
+        formula: aqueousSolidSolute.formula,
+        concentration: concentrationInput,
+        volume: cantidadFinal,
+        volumeUnit: unidadFinal,
+      });
+    }
+
+    return calculateConcentrationPreparation({
+      method: "molality",
+      formula: aqueousSolidSolute.formula,
+      concentration: concentrationInput,
+      solventMass: solventMassInput,
+      solventMassUnit,
+    });
+  }, [
+    aqueousSolidSolute,
+    concentrationMethod,
+    concentrationInput,
+    cantidadFinal,
+    unidadFinal,
+    solventMassInput,
+    solventMassUnit,
+  ]);
+
+  const basePlan = useMemo(() => {
     if (!automaticPreparation.type) {
       return null;
     }
@@ -245,11 +270,16 @@ export default function PreparacionLaboratorioScreen() {
       type: automaticPreparation.type,
 
       finalAmount:
-        Number.isFinite(cantidadNumerica) && cantidadNumerica > 0
-          ? cantidadNumerica
-          : undefined,
+        concentrationMethod === "molality" && aqueousSolidSolute
+          ? undefined
+          : Number.isFinite(cantidadNumerica) && cantidadNumerica > 0
+            ? cantidadNumerica
+            : undefined,
 
-      finalUnit: unidadFinal,
+      finalUnit:
+        concentrationMethod === "molality" && aqueousSolidSolute
+          ? undefined
+          : unidadFinal,
 
       safetyLevel,
 
@@ -265,11 +295,111 @@ export default function PreparacionLaboratorioScreen() {
     });
   }, [
     automaticPreparation,
+    concentrationMethod,
+    aqueousSolidSolute,
     cantidadNumerica,
     unidadFinal,
     safetyLevel,
     mixtureAnalysis,
     liquidLiquidBehavior,
+  ]);
+
+  const molalityPlan = useMemo<PreparationPlan | null>(() => {
+    if (!aqueousSolidSolute || concentrationMethod !== "molality") {
+      return null;
+    }
+
+    if (safetyLevel === "highPrecaution") {
+      return null;
+    }
+
+    if (
+      !concentrationCalculation ||
+      "error" in concentrationCalculation ||
+      concentrationCalculation.method !== "molality"
+    ) {
+      return null;
+    }
+
+    const result = concentrationCalculation.result;
+
+    return {
+      title: "Preparación de una solución por molalidad",
+
+      description:
+        "La molalidad se basa en la cantidad de soluto por kilogramo de solvente. La preparación se realiza por masa y no completando hasta un volumen final.",
+
+      equipmentIds: [
+        "balance",
+        "spatula",
+        "weighing-container",
+        "beaker",
+        "glass-rod",
+      ],
+
+      steps: [
+        "Reuní todos los materiales necesarios antes de comenzar.",
+
+        "Colocá un recipiente limpio y seco sobre la balanza y tará la balanza.",
+
+        `Pesá ${formatNumber(
+          result.solventMass,
+        )} ${result.solventMassUnit} de agua, que corresponde a la masa de solvente indicada.`,
+
+        "Utilizá otro recipiente adecuado para pesar el soluto.",
+
+        `Pesá ${formatNumber(result.gramsNeeded, 2)} g de ${result.formula}.`,
+
+        "Agregá gradualmente el soluto al solvente pesado.",
+
+        "Mezclá con una varilla de vidrio hasta lograr la disolución cuando sea químicamente posible.",
+
+        "Verificá que no quede material adherido al recipiente utilizado para pesar el soluto.",
+
+        "Homogeneizá la preparación.",
+
+        `Rotulá indicando ${result.formula}, molalidad ${formatNumber(
+          result.molality,
+        )} mol/kg, masa de solvente utilizada y fecha.`,
+      ],
+
+      warnings: [
+        "La masa de solvente no es la masa total de la solución.",
+
+        "La molalidad no utiliza el volumen final de la solución como base de cálculo.",
+
+        "No corresponde completar la preparación hasta la marca de un matraz aforado.",
+
+        ...(safetyLevel === "supervision"
+          ? ["Esta preparación requiere supervisión docente."]
+          : []),
+      ],
+
+      canShowAutonomousProcedure: true,
+    };
+  }, [
+    aqueousSolidSolute,
+    concentrationMethod,
+    safetyLevel,
+    concentrationCalculation,
+  ]);
+
+  const plan = useMemo(() => {
+    if (aqueousSolidSolute && concentrationMethod === "molality") {
+      if (safetyLevel === "highPrecaution") {
+        return basePlan;
+      }
+
+      return molalityPlan;
+    }
+
+    return basePlan;
+  }, [
+    aqueousSolidSolute,
+    concentrationMethod,
+    safetyLevel,
+    basePlan,
+    molalityPlan,
   ]);
 
   const materiales = plan
@@ -301,8 +431,8 @@ export default function PreparacionLaboratorioScreen() {
 
         <Text style={styles.subtitle}>
           Ingresá los componentes. QuimiLab identifica sus propiedades, analiza
-          la preparación y, cuando corresponde, calcula automáticamente cuánto
-          material necesitás.
+          la preparación y selecciona automáticamente el método de trabajo
+          adecuado.
         </Text>
 
         <SubstanceInputCard
@@ -341,7 +471,7 @@ export default function PreparacionLaboratorioScreen() {
 
             <Text style={styles.objectiveDescription}>
               QuimiLab analizará los estados físicos, la solubilidad o la
-              miscibilidad cuando existan datos suficientes.
+              miscibilidad.
             </Text>
           </Pressable>
 
@@ -435,9 +565,8 @@ export default function PreparacionLaboratorioScreen() {
                   </Text>
 
                   <Text style={styles.pendingAnalysisText}>
-                    QuimiLab reconoce que ambos componentes son líquidos, pero
-                    todavía no dispone de información específica sobre su
-                    interacción.
+                    QuimiLab reconoce ambos líquidos, pero todavía no dispone de
+                    información específica sobre su interacción.
                   </Text>
                 </View>
               )
@@ -502,120 +631,205 @@ export default function PreparacionLaboratorioScreen() {
                 </Text>
 
                 <Text style={styles.pendingAnalysisText}>
-                  QuimiLab conoce ambas sustancias y sus estados físicos, pero
-                  todavía no posee datos suficientes sobre la interacción
-                  específica entre estos componentes.
+                  QuimiLab conoce ambas sustancias, pero todavía no posee datos
+                  suficientes sobre la interacción específica entre estos
+                  componentes.
                 </Text>
               </View>
             )}
           </View>
         )}
 
-        <View style={styles.inputCard}>
-          <Text style={styles.label}>Cantidad o volumen final</Text>
+        {aqueousSolidSolute ? (
+          <View style={styles.calculationCard}>
+            <Text style={styles.calculationLabel}>CONCENTRACIÓN</Text>
 
-          <TextInput
-            value={cantidadFinal}
-            onChangeText={setCantidadFinal}
-            keyboardType="decimal-pad"
-            style={styles.input}
-            placeholder="500"
-          />
+            <Text style={styles.calculationTitle}>
+              ¿Cómo querés expresar la concentración?
+            </Text>
 
-          <Text style={styles.label}>Unidad</Text>
-
-          <View style={styles.unitRow}>
-            {(["mL", "L", "g", "kg"] as const).map((unit) => (
+            <View style={styles.methodRow}>
               <Pressable
-                key={unit}
                 style={[
-                  styles.unitButton,
-                  unidadFinal === unit && styles.unitButtonActive,
+                  styles.methodButton,
+                  concentrationMethod === "molarity" &&
+                    styles.methodButtonActive,
                 ]}
-                onPress={() => setUnidadFinal(unit)}
+                onPress={() => setConcentrationMethod("molarity")}
               >
                 <Text
                   style={[
-                    styles.unitText,
-                    unidadFinal === unit && styles.unitTextActive,
+                    styles.methodText,
+                    concentrationMethod === "molarity" &&
+                      styles.methodTextActive,
                   ]}
                 >
-                  {unit}
+                  Molaridad
                 </Text>
               </Pressable>
-            ))}
-          </View>
-        </View>
 
-        {aqueousSolidSolute && (
-          <View style={styles.calculationCard}>
-            <Text style={styles.calculationLabel}>CÁLCULO DE PREPARACIÓN</Text>
+              <Pressable
+                style={[
+                  styles.methodButton,
+                  concentrationMethod === "molality" &&
+                    styles.methodButtonActive,
+                ]}
+                onPress={() => setConcentrationMethod("molality")}
+              >
+                <Text
+                  style={[
+                    styles.methodText,
+                    concentrationMethod === "molality" &&
+                      styles.methodTextActive,
+                  ]}
+                >
+                  Molalidad
+                </Text>
+              </Pressable>
+            </View>
 
-            <Text style={styles.calculationTitle}>
-              Preparación por molaridad
+            <Text style={styles.label}>
+              {concentrationMethod === "molarity"
+                ? "Molaridad deseada"
+                : "Molalidad deseada"}
             </Text>
 
-            <Text style={styles.calculationIntro}>
-              QuimiLab detectó una solución acuosa preparada a partir de un
-              soluto sólido. Puede calcular automáticamente la masa que
-              necesitás pesar.
-            </Text>
-
-            <Text style={styles.label}>Molaridad deseada</Text>
-
-            <View style={styles.molarityInputRow}>
+            <View style={styles.valueRow}>
               <TextInput
-                value={molarityInput}
-                onChangeText={setMolarityInput}
+                value={concentrationInput}
+                onChangeText={setConcentrationInput}
                 keyboardType="decimal-pad"
-                style={[styles.input, styles.molarityInput]}
+                style={[styles.input, styles.flexInput]}
                 placeholder="0,5"
               />
 
-              <Text style={styles.inputSuffix}>mol/L</Text>
+              <Text style={styles.inputSuffix}>
+                {concentrationMethod === "molarity" ? "mol/L" : "mol/kg"}
+              </Text>
             </View>
 
-            {molarityCalculation ? (
-              "error" in molarityCalculation ? (
+            {concentrationMethod === "molarity" ? (
+              <>
+                <Text style={styles.label}>Volumen final de solución</Text>
+
+                <TextInput
+                  value={cantidadFinal}
+                  onChangeText={setCantidadFinal}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                  placeholder="500"
+                />
+
+                <View style={styles.unitRow}>
+                  {(["mL", "L"] as const).map((unit) => (
+                    <Pressable
+                      key={unit}
+                      style={[
+                        styles.unitButton,
+                        unidadFinal === unit && styles.unitButtonActive,
+                      ]}
+                      onPress={() => setUnidadFinal(unit)}
+                    >
+                      <Text
+                        style={[
+                          styles.unitText,
+                          unidadFinal === unit && styles.unitTextActive,
+                        ]}
+                      >
+                        {unit}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Text style={styles.methodExplanation}>
+                  La molaridad utiliza el volumen final de la solución.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.label}>Masa de solvente</Text>
+
+                <TextInput
+                  value={solventMassInput}
+                  onChangeText={setSolventMassInput}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                  placeholder="500"
+                />
+
+                <View style={styles.unitRow}>
+                  {(["g", "kg"] as const).map((unit) => (
+                    <Pressable
+                      key={unit}
+                      style={[
+                        styles.unitButton,
+                        solventMassUnit === unit && styles.unitButtonActive,
+                      ]}
+                      onPress={() => setSolventMassUnit(unit)}
+                    >
+                      <Text
+                        style={[
+                          styles.unitText,
+                          solventMassUnit === unit && styles.unitTextActive,
+                        ]}
+                      >
+                        {unit}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                <Text style={styles.methodExplanation}>
+                  La molalidad utiliza la masa del solvente, no el volumen final
+                  de la solución.
+                </Text>
+              </>
+            )}
+
+            {concentrationCalculation ? (
+              "error" in concentrationCalculation ? (
                 <View style={styles.calculationError}>
                   <Text style={styles.calculationErrorTitle}>
                     No se puede calcular
                   </Text>
 
                   <Text style={styles.calculationErrorText}>
-                    {molarityCalculation.error}
+                    {concentrationCalculation.error}
                   </Text>
                 </View>
-              ) : (
+              ) : concentrationCalculation.method === "molarity" ? (
                 <>
                   <View style={styles.calculationSteps}>
                     <Text style={styles.calculationStepTitle}>
-                      1. Moles necesarios
+                      1. Calcular los moles
                     </Text>
 
                     <Text style={styles.calculationEquation}>n = M × V</Text>
 
                     <Text style={styles.calculationValue}>
-                      n = {formatNumber(molarityCalculation.molarity)} ×{" "}
-                      {formatNumber(molarityCalculation.volumeLiters)} L
+                      n ={" "}
+                      {formatNumber(concentrationCalculation.result.molarity)} ×{" "}
+                      {formatNumber(
+                        concentrationCalculation.result.volumeLiters,
+                      )}{" "}
+                      L
                     </Text>
 
                     <Text style={styles.calculationStrong}>
-                      n = {formatNumber(molarityCalculation.molesNeeded)} mol
+                      n ={" "}
+                      {formatNumber(
+                        concentrationCalculation.result.molesNeeded,
+                      )}{" "}
+                      mol
                     </Text>
 
                     <Text style={styles.calculationStepTitle}>
-                      2. Masa de soluto
+                      2. Convertir moles a gramos
                     </Text>
 
-                    <Text style={styles.calculationEquation}>m = n × MM</Text>
-
-                    <Text style={styles.calculationValue}>
-                      m = {formatNumber(molarityCalculation.molesNeeded)} ×{" "}
-                      {formatNumber(
-                        molarityCalculation.molarMass.molarMass ?? 0,
-                      )}{" "}
-                      g/mol
+                    <Text style={styles.calculationEquation}>
+                      masa = n × MM
                     </Text>
                   </View>
 
@@ -623,14 +837,18 @@ export default function PreparacionLaboratorioScreen() {
                     <Text style={styles.finalCalculationLabel}>RESULTADO</Text>
 
                     <Text style={styles.finalCalculationMass}>
-                      {formatNumber(molarityCalculation.gramsNeeded, 2)} g de{" "}
-                      {molarityCalculation.formula}
+                      {formatNumber(
+                        concentrationCalculation.result.gramsNeeded,
+                        2,
+                      )}{" "}
+                      g de {concentrationCalculation.result.formula}
                     </Text>
 
                     <Text style={styles.finalCalculationText}>
-                      para preparar {formatNumber(molarityCalculation.volume)}{" "}
-                      {molarityCalculation.volumeUnit} de solución{" "}
-                      {formatNumber(molarityCalculation.molarity)} M
+                      para preparar{" "}
+                      {formatNumber(concentrationCalculation.result.volume)}{" "}
+                      {concentrationCalculation.result.volumeUnit} de solución{" "}
+                      {formatNumber(concentrationCalculation.result.molarity)} M
                     </Text>
                   </View>
 
@@ -638,15 +856,128 @@ export default function PreparacionLaboratorioScreen() {
                     <Text style={styles.volumeNoteTitle}>Importante</Text>
 
                     <Text style={styles.volumeNoteText}>
-                      El volumen indicado es el volumen final de la solución. No
-                      significa agregar el soluto a esa cantidad de agua.
-                      Primero se disuelve en una cantidad menor de solvente y
-                      luego se completa hasta el volumen final.
+                      El volumen indicado corresponde al volumen final de la
+                      solución. No significa agregar el soluto a esa cantidad de
+                      agua.
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.calculationSteps}>
+                    <Text style={styles.calculationStepTitle}>
+                      1. Masa de solvente en kg
+                    </Text>
+
+                    <Text style={styles.calculationStrong}>
+                      {formatNumber(
+                        concentrationCalculation.result.solventMassKg,
+                      )}{" "}
+                      kg
+                    </Text>
+
+                    <Text style={styles.calculationStepTitle}>
+                      2. Calcular los moles de soluto
+                    </Text>
+
+                    <Text style={styles.calculationEquation}>
+                      n = m × kg de solvente
+                    </Text>
+
+                    <Text style={styles.calculationValue}>
+                      n ={" "}
+                      {formatNumber(concentrationCalculation.result.molality)} ×{" "}
+                      {formatNumber(
+                        concentrationCalculation.result.solventMassKg,
+                      )}
+                    </Text>
+
+                    <Text style={styles.calculationStrong}>
+                      n ={" "}
+                      {formatNumber(
+                        concentrationCalculation.result.molesNeeded,
+                      )}{" "}
+                      mol
+                    </Text>
+
+                    <Text style={styles.calculationStepTitle}>
+                      3. Convertir moles a gramos
+                    </Text>
+
+                    <Text style={styles.calculationEquation}>
+                      masa = n × MM
+                    </Text>
+                  </View>
+
+                  <View style={styles.finalCalculation}>
+                    <Text style={styles.finalCalculationLabel}>RESULTADO</Text>
+
+                    <Text style={styles.finalCalculationMass}>
+                      {formatNumber(
+                        concentrationCalculation.result.gramsNeeded,
+                        2,
+                      )}{" "}
+                      g de {concentrationCalculation.result.formula}
+                    </Text>
+
+                    <Text style={styles.finalCalculationText}>
+                      con{" "}
+                      {formatNumber(
+                        concentrationCalculation.result.solventMass,
+                      )}{" "}
+                      {concentrationCalculation.result.solventMassUnit} de
+                      solvente para obtener una molalidad de{" "}
+                      {formatNumber(concentrationCalculation.result.molality)}{" "}
+                      mol/kg
+                    </Text>
+                  </View>
+
+                  <View style={styles.volumeNote}>
+                    <Text style={styles.volumeNoteTitle}>Importante</Text>
+
+                    <Text style={styles.volumeNoteText}>
+                      La masa indicada corresponde al solvente, no a la masa
+                      total de la solución. En molalidad no se completa hasta un
+                      volumen final.
                     </Text>
                   </View>
                 </>
               )
             ) : null}
+          </View>
+        ) : (
+          <View style={styles.inputCard}>
+            <Text style={styles.label}>Cantidad o volumen de preparación</Text>
+
+            <TextInput
+              value={cantidadFinal}
+              onChangeText={setCantidadFinal}
+              keyboardType="decimal-pad"
+              style={styles.input}
+              placeholder="500"
+            />
+
+            <View style={styles.unitRow}>
+              {(["mL", "L", "g", "kg"] as const).map((unit) => (
+                <Pressable
+                  key={unit}
+                  style={[
+                    styles.unitButton,
+                    unidadFinal === unit && styles.unitButtonActive,
+                  ]}
+                  onPress={() => setUnidadFinal(unit)}
+                >
+                  <Text
+                    style={[
+                      styles.unitText,
+                      unidadFinal === unit && styles.unitTextActive,
+                    ]}
+                  >
+                    {unit}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
         )}
 
@@ -713,9 +1044,8 @@ export default function PreparacionLaboratorioScreen() {
             <Text style={styles.pendingTitle}>Procedimiento pendiente</Text>
 
             <Text style={styles.pendingText}>
-              QuimiLab necesita información suficiente sobre la interacción
-              entre los componentes antes de seleccionar materiales y generar un
-              procedimiento.
+              QuimiLab necesita información suficiente para seleccionar
+              materiales y generar un procedimiento correcto.
             </Text>
           </View>
         )}
@@ -724,14 +1054,14 @@ export default function PreparacionLaboratorioScreen() {
           <Text style={styles.infoTitle}>¿Cómo decide QuimiLab?</Text>
 
           <Text style={styles.infoText}>
-            QuimiLab identifica los componentes, analiza sus propiedades y
-            determina el tipo de preparación.
+            QuimiLab analiza las sustancias, sus estados físicos y su
+            interacción antes de determinar el procedimiento.
           </Text>
 
           <Text style={styles.infoText}>
-            Cuando detecta una solución acuosa preparada a partir de un soluto
-            sólido, puede integrar el cálculo de molaridad para determinar
-            automáticamente la masa que debe pesarse.
+            Cuando se prepara una solución acuosa desde un soluto sólido,
+            permite elegir el método de concentración y modifica automáticamente
+            los datos, cálculos, materiales y procedimiento.
           </Text>
         </View>
       </ScrollView>
@@ -895,7 +1225,7 @@ const styles = StyleSheet.create({
     color: "#173b40",
     fontSize: 17,
     marginBottom: 8,
-    marginTop: 8,
+    marginTop: 12,
   },
 
   input: {
@@ -1091,10 +1421,87 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
 
+  calculationCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#0d887d",
+    padding: 20,
+    marginBottom: 22,
+  },
+
+  calculationLabel: {
+    color: "#0d887d",
+    fontWeight: "800",
+    fontSize: 13,
+    marginBottom: 6,
+  },
+
+  calculationTitle: {
+    color: "#173b40",
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 16,
+  },
+
+  methodRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+
+  methodButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#cddfdd",
+    borderRadius: 13,
+    paddingVertical: 13,
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+  },
+
+  methodButtonActive: {
+    backgroundColor: "#0d887d",
+    borderColor: "#0d887d",
+  },
+
+  methodText: {
+    color: "#173b40",
+    fontWeight: "800",
+  },
+
+  methodTextActive: {
+    color: "#ffffff",
+  },
+
+  methodExplanation: {
+    color: "#617a7b",
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 10,
+  },
+
+  valueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  flexInput: {
+    flex: 1,
+  },
+
+  inputSuffix: {
+    marginLeft: 10,
+    color: "#617a7b",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
   unitRow: {
     flexDirection: "row",
     gap: 8,
     flexWrap: "wrap",
+    marginTop: 10,
   },
 
   unitButton: {
@@ -1118,52 +1525,6 @@ const styles = StyleSheet.create({
 
   unitTextActive: {
     color: "#ffffff",
-  },
-
-  calculationCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#0d887d",
-    padding: 20,
-    marginBottom: 22,
-  },
-
-  calculationLabel: {
-    color: "#0d887d",
-    fontWeight: "800",
-    fontSize: 13,
-    marginBottom: 6,
-  },
-
-  calculationTitle: {
-    color: "#173b40",
-    fontSize: 25,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-
-  calculationIntro: {
-    color: "#617a7b",
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 14,
-  },
-
-  molarityInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  molarityInput: {
-    flex: 1,
-  },
-
-  inputSuffix: {
-    marginLeft: 10,
-    color: "#617a7b",
-    fontWeight: "700",
-    fontSize: 16,
   },
 
   calculationSteps: {
