@@ -20,10 +20,12 @@ import { classifyMixture } from "../chemistry/classifyMixture";
 
 import {
     calculateConcentrationPreparation,
+    calculateTracePreparation,
     getConcentrationMethodLabel,
     getConcentrationUnit,
     type ConcentrationMethod,
     type ConcentrationPreparationResponse,
+    type TracePreparationResponse,
 } from "../chemistry/concentrationPreparation";
 
 import { inferPreparationType } from "../chemistry/inferPreparationType";
@@ -39,6 +41,10 @@ import { labEquipment } from "../data/labEquipment";
 
 type PreparationObjective = "combineComponents" | "dilution";
 
+type PreparationConcentrationMethod = ConcentrationMethod | "ppm" | "ppb";
+
+type TracePreparationMode = "dilute-aqueous" | "mass-mass";
+
 export default function PreparacionLaboratorioScreen() {
   const [component1Input, setComponent1Input] = useState("CaCl2");
 
@@ -52,7 +58,7 @@ export default function PreparacionLaboratorioScreen() {
   const [unidadFinal, setUnidadFinal] = useState<"mL" | "L" | "g" | "kg">("mL");
 
   const [concentrationMethod, setConcentrationMethod] =
-    useState<ConcentrationMethod>("molarity");
+    useState<PreparationConcentrationMethod>("molarity");
 
   const [concentrationInput, setConcentrationInput] = useState("0,5");
 
@@ -63,6 +69,9 @@ export default function PreparacionLaboratorioScreen() {
   const [finalMassInput, setFinalMassInput] = useState("500");
 
   const [finalMassUnit, setFinalMassUnit] = useState<"g" | "kg">("g");
+
+  const [traceMode, setTraceMode] =
+    useState<TracePreparationMode>("dilute-aqueous");
 
   const cantidadNumerica = Number(cantidadFinal.replace(",", "."));
 
@@ -242,7 +251,7 @@ export default function PreparacionLaboratorioScreen() {
     return component1;
   }, [percentageComponent, component1, component2]);
 
-  const availableMethods = useMemo<ConcentrationMethod[]>(() => {
+  const availableMethods = useMemo<PreparationConcentrationMethod[]>(() => {
     if (aqueousSolidSolute) {
       return [
         "molarity",
@@ -250,6 +259,8 @@ export default function PreparacionLaboratorioScreen() {
         "normality",
         "massMassPercentage",
         "massVolumePercentage",
+        "ppm",
+        "ppb",
       ];
     }
 
@@ -274,16 +285,25 @@ export default function PreparacionLaboratorioScreen() {
       concentrationMethod === "molarity" ||
       concentrationMethod === "normality" ||
       concentrationMethod === "massVolumePercentage" ||
-      concentrationMethod === "volumeVolumePercentage";
+      concentrationMethod === "volumeVolumePercentage" ||
+      ((concentrationMethod === "ppm" || concentrationMethod === "ppb") &&
+        traceMode === "dilute-aqueous");
 
     if (requiresVolume && unidadFinal !== "mL" && unidadFinal !== "L") {
       setUnidadFinal("mL");
     }
-  }, [concentrationMethod, unidadFinal]);
+  }, [concentrationMethod, traceMode, unidadFinal]);
+
+  const isTraceMethod =
+    concentrationMethod === "ppm" || concentrationMethod === "ppb";
 
   const concentrationCalculation =
     useMemo<ConcentrationPreparationResponse | null>(() => {
-      if (availableMethods.length === 0 || !concentrationInput.trim()) {
+      if (
+        availableMethods.length === 0 ||
+        !concentrationInput.trim() ||
+        isTraceMethod
+      ) {
         return null;
       }
 
@@ -386,25 +406,34 @@ export default function PreparacionLaboratorioScreen() {
         });
       }
 
-      if (!percentageComponent || unidadFinal === "g" || unidadFinal === "kg") {
-        return {
+      if (concentrationMethod === "volumeVolumePercentage") {
+        if (
+          !percentageComponent ||
+          unidadFinal === "g" ||
+          unidadFinal === "kg"
+        ) {
+          return {
+            method: "volumeVolumePercentage",
+            error:
+              "El porcentaje v/v requiere un componente líquido y un volumen final expresado en mL o L.",
+          };
+        }
+
+        return calculateConcentrationPreparation({
           method: "volumeVolumePercentage",
-          error:
-            "El porcentaje v/v requiere un componente líquido y un volumen final expresado en mL o L.",
-        };
+          component: percentageComponent.formula,
+          concentration: concentrationInput,
+          finalVolume: cantidadFinal,
+          volumeUnit: unidadFinal,
+        });
       }
 
-      return calculateConcentrationPreparation({
-        method: "volumeVolumePercentage",
-        component: percentageComponent.formula,
-        concentration: concentrationInput,
-        finalVolume: cantidadFinal,
-        volumeUnit: unidadFinal,
-      });
+      return null;
     }, [
       availableMethods,
       concentrationMethod,
       concentrationInput,
+      isTraceMethod,
       aqueousSolidSolute,
       percentageComponent,
       cantidadFinal,
@@ -415,9 +444,55 @@ export default function PreparacionLaboratorioScreen() {
       finalMassUnit,
     ]);
 
+  const traceCalculation = useMemo<TracePreparationResponse | null>(() => {
+    if (!isTraceMethod || !aqueousSolidSolute || !concentrationInput.trim()) {
+      return null;
+    }
+
+    if (traceMode === "mass-mass") {
+      return calculateTracePreparation({
+        component: aqueousSolidSolute.formula,
+        concentration: concentrationInput,
+        unit: concentrationMethod,
+        mode: "mass-mass",
+        finalAmount: finalMassInput,
+        finalUnit: finalMassUnit,
+      });
+    }
+
+    if (unidadFinal !== "mL" && unidadFinal !== "L") {
+      return {
+        unit: concentrationMethod,
+        mode: "dilute-aqueous",
+        error:
+          "La solución acuosa diluida requiere un volumen final expresado en mL o L.",
+      };
+    }
+
+    return calculateTracePreparation({
+      component: aqueousSolidSolute.formula,
+      concentration: concentrationInput,
+      unit: concentrationMethod,
+      mode: "dilute-aqueous",
+      finalAmount: cantidadFinal,
+      finalUnit: unidadFinal,
+    });
+  }, [
+    isTraceMethod,
+    aqueousSolidSolute,
+    concentrationInput,
+    concentrationMethod,
+    traceMode,
+    finalMassInput,
+    finalMassUnit,
+    cantidadFinal,
+    unidadFinal,
+  ]);
+
   const concentrationUsesMassBasis =
     concentrationMethod === "molality" ||
-    concentrationMethod === "massMassPercentage";
+    concentrationMethod === "massMassPercentage" ||
+    (isTraceMethod && traceMode === "mass-mass");
 
   const basePlan = useMemo(() => {
     if (!automaticPreparation.type) {
@@ -722,6 +797,114 @@ export default function PreparacionLaboratorioScreen() {
     percentageComponent,
   ]);
 
+  const tracePlan = useMemo<PreparationPlan | null>(() => {
+    if (
+      !isTraceMethod ||
+      safetyLevel === "highPrecaution" ||
+      !traceCalculation ||
+      "error" in traceCalculation
+    ) {
+      return null;
+    }
+
+    const result = traceCalculation.result;
+
+    const componentMassText = getTraceMassText(result);
+
+    if (traceMode === "mass-mass") {
+      return {
+        title: `Preparación en ${result.unit} por masa`,
+
+        description:
+          "La concentración traza se calcula respecto de la masa total final de la mezcla.",
+
+        equipmentIds: [
+          "balance",
+          "spatula",
+          "weighing-container",
+          "beaker",
+          "glass-rod",
+        ],
+
+        steps: [
+          "Reuní los materiales necesarios.",
+          "Verificá que la balanza tenga resolución suficiente para medir la masa calculada.",
+          `Medí ${componentMassText} de ${aqueousSolidSolute?.name ?? result.component}.`,
+          `Completá la preparación hasta una masa final de ${formatNumber(
+            result.finalAmount,
+          )} ${result.finalUnit}.`,
+          "Homogeneizá cuidadosamente la mezcla.",
+          `Rotulá indicando ${formatNumber(
+            result.concentration,
+          )} ${result.unit} y fecha.`,
+        ],
+
+        warnings: [
+          result.unit === "ppm"
+            ? "En base masa/masa, 1 ppm equivale a 1 mg de componente por kilogramo de mezcla."
+            : "En base masa/masa, 1 ppb equivale a 1 microgramo de componente por kilogramo de mezcla.",
+          "Si la masa calculada es menor que la resolución de la balanza disponible, no debe pesarse directamente. Debe utilizarse una solución madre y realizar una dilución adecuada.",
+          ...(safetyLevel === "supervision"
+            ? ["Esta preparación requiere supervisión docente."]
+            : []),
+        ],
+
+        canShowAutonomousProcedure: true,
+      };
+    }
+
+    return {
+      title: `Preparación acuosa en ${result.unit}`,
+
+      description:
+        "La concentración se calcula mediante la aproximación válida para soluciones acuosas suficientemente diluidas y con densidad cercana a 1 kg/L.",
+
+      equipmentIds: [
+        "balance",
+        "spatula",
+        "weighing-container",
+        "beaker",
+        "glass-rod",
+        "funnel",
+        "volumetric-flask",
+        "wash-bottle",
+      ],
+
+      steps: [
+        "Reuní los materiales necesarios.",
+        "Verificá que el instrumental disponible tenga resolución suficiente para medir la cantidad calculada.",
+        `La cantidad teórica necesaria es ${componentMassText} de ${aqueousSolidSolute?.name ?? result.component}.`,
+        "Si esa cantidad puede medirse con precisión, prepará inicialmente una solución con una cantidad de agua menor al volumen final.",
+        "Transferí cuantitativamente la preparación al matraz aforado.",
+        `Completá cuidadosamente hasta un volumen final de ${formatNumber(
+          result.finalAmount,
+        )} ${result.finalUnit}.`,
+        "Tapá y homogeneizá.",
+        `Rotulá indicando ${formatNumber(
+          result.concentration,
+        )} ${result.unit} y fecha.`,
+      ],
+
+      warnings: [
+        result.warning ??
+          "La relación utilizada es una aproximación para soluciones acuosas diluidas.",
+        "Para concentraciones muy bajas, la pesada directa puede no ser técnicamente posible con una balanza de laboratorio escolar.",
+        "Si la cantidad calculada es menor que la resolución del instrumental, corresponde preparar una solución madre de concentración conocida y luego realizar una dilución.",
+        ...(safetyLevel === "supervision"
+          ? ["Esta preparación requiere supervisión docente."]
+          : []),
+      ],
+
+      canShowAutonomousProcedure: true,
+    };
+  }, [
+    isTraceMethod,
+    safetyLevel,
+    traceCalculation,
+    traceMode,
+    aqueousSolidSolute,
+  ]);
+
   const plan = useMemo(() => {
     if (
       safetyLevel !== "highPrecaution" &&
@@ -731,8 +914,20 @@ export default function PreparacionLaboratorioScreen() {
       return null;
     }
 
+    if (
+      safetyLevel !== "highPrecaution" &&
+      traceCalculation &&
+      "error" in traceCalculation
+    ) {
+      return null;
+    }
+
     if (safetyLevel === "highPrecaution") {
       return basePlan;
+    }
+
+    if (isTraceMethod) {
+      return tracePlan ?? basePlan;
     }
 
     switch (concentrationMethod) {
@@ -754,12 +949,15 @@ export default function PreparacionLaboratorioScreen() {
   }, [
     safetyLevel,
     concentrationCalculation,
+    traceCalculation,
+    isTraceMethod,
     concentrationMethod,
     basePlan,
     molalityPlan,
     massMassPlan,
     massVolumePlan,
     volumeVolumePlan,
+    tracePlan,
   ]);
 
   const materiales = plan
@@ -942,7 +1140,7 @@ export default function PreparacionLaboratorioScreen() {
                       concentrationMethod === method && styles.methodTextActive,
                     ]}
                   >
-                    {getConcentrationMethodLabel(method)}
+                    {getPreparationMethodLabel(method)}
                   </Text>
                 </Pressable>
               ))}
@@ -959,16 +1157,147 @@ export default function PreparacionLaboratorioScreen() {
                 keyboardType="decimal-pad"
                 style={[styles.input, styles.flexInput]}
                 placeholder={
-                  concentrationMethod.includes("Percentage") ? "10" : "0,5"
+                  concentrationMethod === "ppm" ||
+                  concentrationMethod === "ppb" ||
+                  concentrationMethod === "massMassPercentage" ||
+                  concentrationMethod === "massVolumePercentage" ||
+                  concentrationMethod === "volumeVolumePercentage"
+                    ? "10"
+                    : "0,5"
                 }
               />
 
               <Text style={styles.suffix}>
-                {getConcentrationUnit(concentrationMethod)}
+                {getPreparationMethodUnit(concentrationMethod)}
               </Text>
             </View>
 
-            {concentrationMethod === "molality" ? (
+            {isTraceMethod ? (
+              <>
+                <Text style={styles.label}>Base de concentración</Text>
+
+                <View style={styles.unitRow}>
+                  <Pressable
+                    style={[
+                      styles.traceModeButton,
+                      traceMode === "dilute-aqueous" && styles.unitButtonActive,
+                    ]}
+                    onPress={() => setTraceMode("dilute-aqueous")}
+                  >
+                    <Text
+                      style={[
+                        styles.unitText,
+                        traceMode === "dilute-aqueous" && styles.unitTextActive,
+                      ]}
+                    >
+                      Solución acuosa diluida
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={[
+                      styles.traceModeButton,
+                      traceMode === "mass-mass" && styles.unitButtonActive,
+                    ]}
+                    onPress={() => setTraceMode("mass-mass")}
+                  >
+                    <Text
+                      style={[
+                        styles.unitText,
+                        traceMode === "mass-mass" && styles.unitTextActive,
+                      ]}
+                    >
+                      Masa / masa
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {traceMode === "dilute-aqueous" ? (
+                  <>
+                    <Text style={styles.label}>Volumen final de solución</Text>
+
+                    <TextInput
+                      value={cantidadFinal}
+                      onChangeText={setCantidadFinal}
+                      keyboardType="decimal-pad"
+                      style={styles.input}
+                    />
+
+                    <View style={styles.unitRow}>
+                      {(["mL", "L"] as const).map((unit) => (
+                        <Pressable
+                          key={unit}
+                          style={[
+                            styles.unitButton,
+                            unidadFinal === unit && styles.unitButtonActive,
+                          ]}
+                          onPress={() => setUnidadFinal(unit)}
+                        >
+                          <Text
+                            style={[
+                              styles.unitText,
+                              unidadFinal === unit && styles.unitTextActive,
+                            ]}
+                          >
+                            {unit}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    <Text style={styles.helper}>
+                      Para soluciones acuosas diluidas, QuimiLab utiliza la
+                      aproximación basada en una densidad cercana a 1 kg/L.
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.label}>Masa final de la mezcla</Text>
+
+                    <TextInput
+                      value={finalMassInput}
+                      onChangeText={setFinalMassInput}
+                      keyboardType="decimal-pad"
+                      style={styles.input}
+                    />
+
+                    <View style={styles.unitRow}>
+                      {(["g", "kg"] as const).map((unit) => (
+                        <Pressable
+                          key={unit}
+                          style={[
+                            styles.unitButton,
+                            finalMassUnit === unit && styles.unitButtonActive,
+                          ]}
+                          onPress={() => setFinalMassUnit(unit)}
+                        >
+                          <Text
+                            style={[
+                              styles.unitText,
+                              finalMassUnit === unit && styles.unitTextActive,
+                            ]}
+                          >
+                            {unit}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    <Text style={styles.helper}>
+                      Esta opción calcula ppm o ppb directamente respecto de la
+                      masa total de la mezcla.
+                    </Text>
+                  </>
+                )}
+
+                {traceCalculation ? (
+                  <TraceResultView
+                    calculation={traceCalculation}
+                    componentName={aqueousSolidSolute?.name}
+                  />
+                ) : null}
+              </>
+            ) : concentrationMethod === "molality" ? (
               <>
                 <Text style={styles.label}>Masa de solvente</Text>
 
@@ -1081,7 +1410,7 @@ export default function PreparacionLaboratorioScreen() {
               </>
             )}
 
-            {concentrationCalculation ? (
+            {!isTraceMethod && concentrationCalculation ? (
               <ConcentrationResultView
                 calculation={concentrationCalculation}
                 componentName={percentageComponent?.name}
@@ -1200,6 +1529,71 @@ export default function PreparacionLaboratorioScreen() {
           </Text>
         </View>
       </ScrollView>
+    </>
+  );
+}
+
+function TraceResultView({
+  calculation,
+  componentName,
+}: {
+  calculation: TracePreparationResponse;
+  componentName?: string;
+}) {
+  if ("error" in calculation) {
+    return (
+      <View style={styles.errorBox}>
+        <Text style={styles.warningTitle}>No se puede calcular</Text>
+
+        <Text style={styles.warningText}>{calculation.error}</Text>
+      </View>
+    );
+  }
+
+  const result = calculation.result;
+
+  return (
+    <>
+      <View style={styles.calculationBox}>
+        <Text style={styles.calculationTitle}>Cálculo</Text>
+
+        <Text style={styles.equation}>{result.calculation}</Text>
+
+        <Text style={styles.calculationTitle}>
+          Masa necesaria del componente
+        </Text>
+
+        <Text style={styles.strong}>{getTraceMassText(result)}</Text>
+      </View>
+
+      <ResultBox>
+        {getTraceMassText(result)} de {componentName ?? result.component}
+        {"\n"}
+        para una concentración de {formatNumber(result.concentration)}{" "}
+        {result.unit}
+      </ResultBox>
+
+      {result.approximation ? (
+        <View style={styles.warningCard}>
+          <Text style={styles.warningTitle}>Aproximación</Text>
+
+          <Text style={styles.warningText}>{result.warning}</Text>
+        </View>
+      ) : (
+        <View style={styles.helperBox}>
+          <Text style={styles.body}>
+            Este cálculo está expresado en base masa/masa.
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.helperBox}>
+        <Text style={styles.body}>
+          Para masas muy pequeñas, verificá siempre la resolución del
+          instrumental. Si no pueden medirse con precisión, corresponde preparar
+          una solución madre y luego realizar una dilución.
+        </Text>
+      </View>
     </>
   );
 }
@@ -1476,7 +1870,37 @@ function SubstanceInputCard({
   );
 }
 
-function getConcentrationPrompt(method: ConcentrationMethod): string {
+function getPreparationMethodLabel(
+  method: PreparationConcentrationMethod,
+): string {
+  if (method === "ppm") {
+    return "ppm";
+  }
+
+  if (method === "ppb") {
+    return "ppb";
+  }
+
+  return getConcentrationMethodLabel(method);
+}
+
+function getPreparationMethodUnit(
+  method: PreparationConcentrationMethod,
+): string {
+  if (method === "ppm") {
+    return "ppm";
+  }
+
+  if (method === "ppb") {
+    return "ppb";
+  }
+
+  return getConcentrationUnit(method);
+}
+
+function getConcentrationPrompt(
+  method: PreparationConcentrationMethod,
+): string {
   switch (method) {
     case "molarity":
       return "Molaridad deseada";
@@ -1495,10 +1919,16 @@ function getConcentrationPrompt(method: ConcentrationMethod): string {
 
     case "volumeVolumePercentage":
       return "Porcentaje v/v";
+
+    case "ppm":
+      return "Concentración en ppm";
+
+    case "ppb":
+      return "Concentración en ppb";
   }
 }
 
-function getMethodExplanation(method: ConcentrationMethod): string {
+function getMethodExplanation(method: PreparationConcentrationMethod): string {
   switch (method) {
     case "molarity":
       return "La molaridad utiliza el volumen final de la solución.";
@@ -1515,6 +1945,24 @@ function getMethodExplanation(method: ConcentrationMethod): string {
     default:
       return "";
   }
+}
+
+function getTraceMassText(result: {
+  componentMass: {
+    grams: number;
+    milligrams: number;
+    micrograms: number;
+  };
+}): string {
+  if (result.componentMass.grams >= 1) {
+    return `${formatNumber(result.componentMass.grams, 6)} g`;
+  }
+
+  if (result.componentMass.milligrams >= 1) {
+    return `${formatNumber(result.componentMass.milligrams, 6)} mg`;
+  }
+
+  return `${formatNumber(result.componentMass.micrograms, 6)} µg`;
 }
 
 function getPhysicalStateLabel(
@@ -1814,6 +2262,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
 
+  traceModeButton: {
+    flexGrow: 1,
+    borderWidth: 1,
+    borderColor: "#cddfdd",
+    borderRadius: 11,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    alignItems: "center",
+  },
+
   unitButtonActive: {
     backgroundColor: "#0d887d",
     borderColor: "#0d887d",
@@ -1822,6 +2280,7 @@ const styles = StyleSheet.create({
   unitText: {
     color: "#173b40",
     fontWeight: "700",
+    textAlign: "center",
   },
 
   unitTextActive: {

@@ -25,6 +25,16 @@ import {
   type PercentageVolumeUnit,
 } from "./percentages";
 
+import {
+  calculateDiluteAqueousTrace,
+  calculateMassMassTrace,
+  type TraceConcentrationResult,
+  type TraceMassUnit,
+  type TraceMode,
+  type TraceUnit,
+  type TraceVolumeUnit,
+} from "./traceConcentration";
+
 export type ConcentrationMethod =
   | "molarity"
   | "molality"
@@ -394,4 +404,125 @@ export function getConcentrationUnit(method: ConcentrationMethod): string {
     case "volumeVolumePercentage":
       return "%";
   }
+}
+
+/* =========================================================
+   CONCENTRACIONES TRAZA: ppm y ppb
+   ========================================================= */
+
+export type TracePreparationInput = {
+  component: string;
+  concentration: string;
+  unit: TraceUnit;
+  mode: TraceMode;
+  finalAmount: string;
+  finalUnit: TraceMassUnit | TraceVolumeUnit;
+};
+
+export type TracePreparationSuccess = {
+  unit: TraceUnit;
+  mode: TraceMode;
+  result: TraceConcentrationResult;
+  title: string;
+  concentrationLabel: string;
+  basisLabel: string;
+  preparationNote: string;
+};
+
+export type TracePreparationError = {
+  unit: TraceUnit;
+  mode: TraceMode;
+  error: string;
+};
+
+export type TracePreparationResponse =
+  | TracePreparationSuccess
+  | TracePreparationError;
+
+export function calculateTracePreparation(
+  input: TracePreparationInput,
+): TracePreparationResponse {
+  if (input.mode === "mass-mass") {
+    if (input.finalUnit !== "g" && input.finalUnit !== "kg") {
+      return {
+        unit: input.unit,
+        mode: input.mode,
+        error:
+          "Para ppm o ppb en base masa/masa, la cantidad final debe expresarse en g o kg.",
+      };
+    }
+
+    const calculation = calculateMassMassTrace(
+      input.component,
+      input.concentration,
+      input.finalAmount,
+      input.finalUnit,
+      input.unit,
+    );
+
+    if ("error" in calculation) {
+      return {
+        unit: input.unit,
+        mode: input.mode,
+        error: calculation.error,
+      };
+    }
+
+    return {
+      unit: input.unit,
+      mode: input.mode,
+      result: calculation,
+      title:
+        input.unit === "ppm"
+          ? "Preparación en partes por millón"
+          : "Preparación en partes por mil millones",
+      concentrationLabel: input.unit === "ppm" ? "ppm" : "ppb",
+      basisLabel: "Concentración masa/masa",
+      preparationNote:
+        input.unit === "ppm"
+          ? "En base masa/masa, 1 ppm equivale a 1 mg de componente por kilogramo de mezcla."
+          : "En base masa/masa, 1 ppb equivale a 1 microgramo de componente por kilogramo de mezcla.",
+    };
+  }
+
+  if (input.finalUnit !== "mL" && input.finalUnit !== "L") {
+    return {
+      unit: input.unit,
+      mode: input.mode,
+      error:
+        "Para la aproximación en solución acuosa diluida, el volumen final debe expresarse en mL o L.",
+    };
+  }
+
+  const calculation = calculateDiluteAqueousTrace(
+    input.component,
+    input.concentration,
+    input.finalAmount,
+    input.finalUnit,
+    input.unit,
+  );
+
+  if ("error" in calculation) {
+    return {
+      unit: input.unit,
+      mode: input.mode,
+      error: calculation.error,
+    };
+  }
+
+  return {
+    unit: input.unit,
+    mode: input.mode,
+    result: calculation,
+    title:
+      input.unit === "ppm"
+        ? "Preparación acuosa en ppm"
+        : "Preparación acuosa en ppb",
+    concentrationLabel: input.unit === "ppm" ? "ppm" : "ppb",
+    basisLabel: "Aproximación para solución acuosa diluida",
+    preparationNote:
+      input.unit === "ppm"
+        ? "Para una solución acuosa suficientemente diluida y con densidad cercana a 1 kg/L, 1 ppm puede aproximarse a 1 mg/L."
+        : "Para una solución acuosa suficientemente diluida y con densidad cercana a 1 kg/L, 1 ppb puede aproximarse a 1 microgramo/L.",
+  };
 }
