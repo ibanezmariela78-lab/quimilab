@@ -35,6 +35,12 @@ import {
   type TraceVolumeUnit,
 } from "./traceConcentration";
 
+import {
+  calculateFormalityPreparation,
+  type FormalityPreparationResult,
+  type FormalityVolumeUnit,
+} from "./formality";
+
 export type ConcentrationMethod =
   | "molarity"
   | "molality"
@@ -524,5 +530,62 @@ export function calculateTracePreparation(
       input.unit === "ppm"
         ? "Para una solución acuosa suficientemente diluida y con densidad cercana a 1 kg/L, 1 ppm puede aproximarse a 1 mg/L."
         : "Para una solución acuosa suficientemente diluida y con densidad cercana a 1 kg/L, 1 ppb puede aproximarse a 1 microgramo/L.",
+  };
+}
+
+/* =========================================================
+   FORMALIDAD
+   ========================================================= */
+
+export type FormalityCentralInput = {
+  formula: string;
+  concentration: string;
+  volume: string;
+  volumeUnit: FormalityVolumeUnit;
+};
+
+export type FormalityCentralSuccess = {
+  method: "formality";
+  result: FormalityPreparationResult;
+  title: string;
+  concentrationLabel: string;
+  basisLabel: string;
+  preparationNote: string;
+};
+
+export type FormalityCentralError = {
+  method: "formality";
+  error: string;
+};
+
+export type FormalityCentralResponse =
+  | FormalityCentralSuccess
+  | FormalityCentralError;
+
+export function calculateCentralFormalityPreparation(
+  input: FormalityCentralInput,
+): FormalityCentralResponse {
+  const calculation = calculateFormalityPreparation(
+    input.formula,
+    input.concentration,
+    input.volume,
+    input.volumeUnit,
+  );
+
+  if ("error" in calculation) {
+    return {
+      method: "formality",
+      error: calculation.error,
+    };
+  }
+
+  return {
+    method: "formality",
+    result: calculation,
+    title: "Preparación por formalidad",
+    concentrationLabel: "Formalidad",
+    basisLabel: "Unidades fórmula por litro de solución",
+    preparationNote:
+      "La formalidad expresa la cantidad de unidades fórmula del soluto por litro de solución. Es especialmente útil para compuestos iónicos, ya que describe la cantidad de fórmula agregada sin asumir qué especies existen finalmente en solución.",
   };
 }

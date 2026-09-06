@@ -19,12 +19,14 @@ import {
 import { classifyMixture } from "../chemistry/classifyMixture";
 
 import {
+    calculateCentralFormalityPreparation,
     calculateConcentrationPreparation,
     calculateTracePreparation,
     getConcentrationMethodLabel,
     getConcentrationUnit,
     type ConcentrationMethod,
     type ConcentrationPreparationResponse,
+    type FormalityCentralResponse,
     type TracePreparationResponse,
 } from "../chemistry/concentrationPreparation";
 
@@ -41,7 +43,11 @@ import { labEquipment } from "../data/labEquipment";
 
 type PreparationObjective = "combineComponents" | "dilution";
 
-type PreparationConcentrationMethod = ConcentrationMethod | "ppm" | "ppb";
+type PreparationConcentrationMethod =
+  | ConcentrationMethod
+  | "formality"
+  | "ppm"
+  | "ppb";
 
 type TracePreparationMode = "dilute-aqueous" | "mass-mass";
 
@@ -257,6 +263,7 @@ export default function PreparacionLaboratorioScreen() {
         "molarity",
         "molality",
         "normality",
+        "formality",
         "massMassPercentage",
         "massVolumePercentage",
         "ppm",
@@ -284,6 +291,7 @@ export default function PreparacionLaboratorioScreen() {
     const requiresVolume =
       concentrationMethod === "molarity" ||
       concentrationMethod === "normality" ||
+      concentrationMethod === "formality" ||
       concentrationMethod === "massVolumePercentage" ||
       concentrationMethod === "volumeVolumePercentage" ||
       ((concentrationMethod === "ppm" || concentrationMethod === "ppb") &&
@@ -302,7 +310,8 @@ export default function PreparacionLaboratorioScreen() {
       if (
         availableMethods.length === 0 ||
         !concentrationInput.trim() ||
-        isTraceMethod
+        isTraceMethod ||
+        concentrationMethod === "formality"
       ) {
         return null;
       }
@@ -443,6 +452,36 @@ export default function PreparacionLaboratorioScreen() {
       finalMassInput,
       finalMassUnit,
     ]);
+
+  const formalityCalculation = useMemo<FormalityCentralResponse | null>(() => {
+    if (
+      concentrationMethod !== "formality" ||
+      !aqueousSolidSolute ||
+      !concentrationInput.trim()
+    ) {
+      return null;
+    }
+
+    if (unidadFinal !== "mL" && unidadFinal !== "L") {
+      return {
+        method: "formality",
+        error: "La formalidad requiere un volumen final expresado en mL o L.",
+      };
+    }
+
+    return calculateCentralFormalityPreparation({
+      formula: aqueousSolidSolute.formula,
+      concentration: concentrationInput,
+      volume: cantidadFinal,
+      volumeUnit: unidadFinal,
+    });
+  }, [
+    concentrationMethod,
+    aqueousSolidSolute,
+    concentrationInput,
+    cantidadFinal,
+    unidadFinal,
+  ]);
 
   const traceCalculation = useMemo<TracePreparationResponse | null>(() => {
     if (!isTraceMethod || !aqueousSolidSolute || !concentrationInput.trim()) {
@@ -916,6 +955,14 @@ export default function PreparacionLaboratorioScreen() {
 
     if (
       safetyLevel !== "highPrecaution" &&
+      formalityCalculation &&
+      "error" in formalityCalculation
+    ) {
+      return null;
+    }
+
+    if (
+      safetyLevel !== "highPrecaution" &&
       traceCalculation &&
       "error" in traceCalculation
     ) {
@@ -949,6 +996,7 @@ export default function PreparacionLaboratorioScreen() {
   }, [
     safetyLevel,
     concentrationCalculation,
+    formalityCalculation,
     traceCalculation,
     isTraceMethod,
     concentrationMethod,
@@ -1410,7 +1458,13 @@ export default function PreparacionLaboratorioScreen() {
               </>
             )}
 
-            {!isTraceMethod && concentrationCalculation ? (
+            {concentrationMethod === "formality" && formalityCalculation ? (
+              <FormalityResultView calculation={formalityCalculation} />
+            ) : null}
+
+            {!isTraceMethod &&
+            concentrationMethod !== "formality" &&
+            concentrationCalculation ? (
               <ConcentrationResultView
                 calculation={concentrationCalculation}
                 componentName={percentageComponent?.name}
@@ -1529,6 +1583,67 @@ export default function PreparacionLaboratorioScreen() {
           </Text>
         </View>
       </ScrollView>
+    </>
+  );
+}
+
+function FormalityResultView({
+  calculation,
+}: {
+  calculation: FormalityCentralResponse;
+}) {
+  if ("error" in calculation) {
+    return (
+      <View style={styles.errorBox}>
+        <Text style={styles.warningTitle}>No se puede calcular</Text>
+
+        <Text style={styles.warningText}>{calculation.error}</Text>
+      </View>
+    );
+  }
+
+  const result = calculation.result;
+
+  return (
+    <>
+      <View style={styles.calculationBox}>
+        <Text style={styles.calculationTitle}>
+          Cantidad de unidades fórmula
+        </Text>
+
+        <Text style={styles.equation}>n fórmula = F × V</Text>
+
+        <Text style={styles.strong}>
+          {formatNumber(result.formulaMoles)} mol
+        </Text>
+
+        <Text style={styles.calculationTitle}>Masa necesaria</Text>
+
+        <Text style={styles.equation}>masa = n fórmula × masa fórmula</Text>
+      </View>
+
+      <ResultBox>
+        {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
+        {"\n"}
+        para preparar {formatNumber(result.volume)} {result.volumeUnit} de
+        solución con formalidad {formatNumber(result.formality)} F
+      </ResultBox>
+
+      <View style={styles.helperBox}>
+        <Text style={styles.body}>
+          La formalidad expresa unidades fórmula por litro de solución. Es
+          especialmente útil para describir compuestos iónicos sin asumir qué
+          especies existen finalmente después de la disolución.
+        </Text>
+      </View>
+
+      {result.safetyWarning ? (
+        <View style={styles.warningCard}>
+          <Text style={styles.warningTitle}>Seguridad</Text>
+
+          <Text style={styles.warningText}>{result.safetyWarning}</Text>
+        </View>
+      ) : null}
     </>
   );
 }
@@ -1873,6 +1988,10 @@ function SubstanceInputCard({
 function getPreparationMethodLabel(
   method: PreparationConcentrationMethod,
 ): string {
+  if (method === "formality") {
+    return "Formalidad";
+  }
+
   if (method === "ppm") {
     return "ppm";
   }
@@ -1887,6 +2006,10 @@ function getPreparationMethodLabel(
 function getPreparationMethodUnit(
   method: PreparationConcentrationMethod,
 ): string {
+  if (method === "formality") {
+    return "F";
+  }
+
   if (method === "ppm") {
     return "ppm";
   }
@@ -1910,6 +2033,9 @@ function getConcentrationPrompt(
 
     case "normality":
       return "Normalidad deseada";
+
+    case "formality":
+      return "Formalidad deseada";
 
     case "massMassPercentage":
       return "Porcentaje m/m";
@@ -1935,6 +2061,9 @@ function getMethodExplanation(method: PreparationConcentrationMethod): string {
 
     case "normality":
       return "La normalidad depende del número de equivalentes involucrados en la reacción.";
+
+    case "formality":
+      return "La formalidad expresa unidades fórmula de soluto por litro de solución y es especialmente útil para compuestos iónicos.";
 
     case "massVolumePercentage":
       return "% m/v expresa gramos de componente por cada 100 mL de solución final.";
