@@ -46,7 +46,7 @@ export default function HomeScreen() {
       description:
         "Molaridad, molalidad, normalidad, porcentajes, fracción molar, ppm, ppb y más.",
       icon: "calculator-outline" as const,
-      route: "/molar-mass" as const,
+      route: "/calculadora-quimica" as const,
     },
     {
       title: "TABLA PERIÓDICA",
