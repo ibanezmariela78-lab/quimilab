@@ -16,7 +16,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
   },
 
   HCl: {
-    name: "Ácido clorhídrico",
+    name: "�cido clorh�drico",
     physicalState: "liquid",
     safetyClassification: "highPrecaution",
     preparationTypes: ["solution", "unknown"],
@@ -24,7 +24,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
 
   NaCl: {
     name: "Cloruro de sodio",
-    aliases: ["Sal común"],
+    aliases: ["Sal com�n"],
     physicalState: "solid",
     waterSolubility: {
       classification: "soluble",
@@ -39,9 +39,9 @@ const commonSubstances: Record<string, SubstanceInfo> = {
   CaCl2: {
     name: "Cloruro de calcio",
     observations: [
-      "La disolución del cloruro de calcio en agua es exotérmica y puede producir un aumento de temperatura.",
+      "La disoluci�n del cloruro de calcio en agua es exot�rmica y puede producir un aumento de temperatura.",
     ],
-    temperatureBehavior: "La disolución en agua es exotérmica.",
+    temperatureBehavior: "La disoluci�n en agua es exot�rmica.",
     physicalState: "solid",
     waterSolubility: {
       classification: "verySoluble",
@@ -54,21 +54,21 @@ const commonSubstances: Record<string, SubstanceInfo> = {
   },
 
   H2SO4: {
-    name: "Ácido sulfúrico",
+    name: "�cido sulf�rico",
     physicalState: "liquid",
     safetyClassification: "highPrecaution",
     preparationTypes: ["solution", "unknown"],
   },
 
   HNO3: {
-    name: "Ácido nítrico",
+    name: "�cido n�trico",
     physicalState: "liquid",
     safetyClassification: "highPrecaution",
     preparationTypes: ["solution", "unknown"],
   },
 
   NaOH: {
-    name: "Hidróxido de sodio",
+    name: "Hidr�xido de sodio",
     physicalState: "solid",
     waterSolubility: {
       classification: "verySoluble",
@@ -77,14 +77,14 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     },
     dissolutionBehavior: "exothermic",
     observations: [
-      "La disolución en agua libera una cantidad importante de calor.",
+      "La disoluci�n en agua libera una cantidad importante de calor.",
     ],
     safetyClassification: "highPrecaution",
     preparationTypes: ["solution", "solidMixture"],
   },
 
   KOH: {
-    name: "Hidróxido de potasio",
+    name: "Hidr�xido de potasio",
     physicalState: "solid",
     waterSolubility: {
       classification: "verySoluble",
@@ -93,19 +93,19 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     },
     dissolutionBehavior: "exothermic",
     observations: [
-      "La disolución en agua puede liberar una cantidad importante de calor.",
+      "La disoluci�n en agua puede liberar una cantidad importante de calor.",
     ],
     safetyClassification: "highPrecaution",
     preparationTypes: ["solution", "solidMixture"],
   },
 
   "Ca(OH)2": {
-    name: "Hidróxido de calcio",
+    name: "Hidr�xido de calcio",
     physicalState: "solid",
     waterSolubility: {
       classification: "slightlySoluble",
       description:
-        "Presenta solubilidad limitada en agua. Según la cantidad utilizada puede quedar sólido sin disolver.",
+        "Presenta solubilidad limitada en agua. Seg�n la cantidad utilizada puede quedar s�lido sin disolver.",
       temperatureDependence: null,
     },
     dissolutionBehavior: "unknown",
@@ -126,7 +126,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     preparationTypes: ["solution"],
   },
 
-  "CuSO4·5H2O": {
+  "CuSO4�5H2O": {
     name: "Sulfato de cobre(II) pentahidratado",
     physicalState: "solid",
     waterSolubility: {
@@ -201,7 +201,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     preparationTypes: ["solution"],
   },
 
-  "MgSO4·7H2O": {
+  "MgSO4�7H2O": {
     name: "Sulfato de magnesio heptahidratado",
     physicalState: "solid",
     waterSolubility: {
@@ -236,7 +236,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
 
   C2H5OH: {
     name: "Etanol",
-    aliases: ["Alcohol etílico"],
+    aliases: ["Alcohol et�lico"],
     physicalState: "liquid",
     waterSolubility: {
       classification: "miscible",
@@ -254,12 +254,12 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     waterSolubility: {
       classification: "immiscible",
       description:
-        "El hexano es prácticamente inmiscible con agua y forma una fase líquida separada.",
+        "El hexano es pr�cticamente inmiscible con agua y forma una fase l�quida separada.",
       temperatureDependence: null,
     },
     dissolutionBehavior: "unknown",
     observations: [
-      "El hexano es un líquido inflamable y debe manipularse únicamente bajo condiciones de laboratorio adecuadas.",
+      "El hexano es un l�quido inflamable y debe manipularse �nicamente bajo condiciones de laboratorio adecuadas.",
     ],
     preparationTypes: ["unknown"],
     safetyClassification: "highPrecaution",
@@ -276,12 +276,93 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     },
     dissolutionBehavior: "unknown",
     observations: [
-      "Es un líquido viscoso. Su viscosidad puede dificultar la medición volumétrica y la transferencia completa entre recipientes.",
+      "Es un l�quido viscoso. Su viscosidad puede dificultar la medici�n volum�trica y la transferencia completa entre recipientes.",
     ],
     preparationTypes: ["solution", "unknown"],
     safetyClassification: "educational",
   },
 
+  KCl: {
+    name: "Cloruro de potasio",
+    physicalState: "solid",
+    waterSolubility: {
+      classification: "soluble",
+      description: "Soluble en agua.",
+      temperatureDependence: null,
+    },
+    dissolutionBehavior: "unknown",
+    preparationTypes: ["solution", "solidMixture"],
+    safetyClassification: "educational",
+  },
+
+  C12H22O11: {
+    name: "Sacarosa",
+    aliases: ["Azucar", "Azucar comun"],
+    physicalState: "solid",
+    waterSolubility: {
+      classification: "soluble",
+      description: "Soluble en agua.",
+      temperatureDependence: null,
+    },
+    dissolutionBehavior: "unknown",
+    preparationTypes: ["solution", "solidMixture"],
+    safetyClassification: "educational",
+  },
+
+  C6H12O6: {
+    name: "Glucosa",
+    aliases: ["Dextrosa"],
+    physicalState: "solid",
+    waterSolubility: {
+      classification: "soluble",
+      description: "Soluble en agua.",
+      temperatureDependence: null,
+    },
+    dissolutionBehavior: "unknown",
+    preparationTypes: ["solution", "solidMixture"],
+    safetyClassification: "educational",
+  },
+
+  "CO(NH2)2": {
+    name: "Urea",
+    physicalState: "solid",
+    waterSolubility: {
+      classification: "verySoluble",
+      description: "Muy soluble en agua.",
+      temperatureDependence: null,
+    },
+    dissolutionBehavior: "unknown",
+    preparationTypes: ["solution", "solidMixture"],
+    safetyClassification: "educational",
+  },
+
+  CH3COONa: {
+    name: "Acetato de sodio",
+    physicalState: "solid",
+    waterSolubility: {
+      classification: "soluble",
+      description: "Soluble en agua.",
+      temperatureDependence: null,
+    },
+    dissolutionBehavior: "unknown",
+    preparationTypes: ["solution", "solidMixture"],
+    safetyClassification: "educational",
+  },
+
+  CaCO3: {
+    name: "Carbonato de calcio",
+    aliases: ["Carbonato calcico"],
+    physicalState: "solid",
+    waterSolubility: {
+      classification: "practicallyInsoluble",
+      description:
+        "Es prácticamente insoluble en agua y puede permanecer como sólido disperso.",
+      temperatureDependence: null,
+    },
+    dissolutionBehavior: "unknown",
+    preparationTypes: ["suspension", "solidMixture"],
+    safetyClassification: "educational",
+  },
   PETROLATUM: {
     name: "Petrolato (vaselina)",
     aliases: ["Petrolato", "Vaselina"],
@@ -289,13 +370,13 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     waterSolubility: {
       classification: "practicallyInsoluble",
       description:
-        "El petrolato es prácticamente insoluble en agua y no forma una solución acuosa verdadera.",
+        "El petrolato es pr�cticamente insoluble en agua y no forma una soluci�n acuosa verdadera.",
       temperatureDependence: null,
     },
     dissolutionBehavior: "unknown",
     observations: [
-      "El petrolato es una mezcla semisólida de hidrocarburos y no posee una fórmula molecular única.",
-      "Su consistencia semisólida hace que normalmente se manipule y dosifique por masa.",
+      "El petrolato es una mezcla semis�lida de hidrocarburos y no posee una f�rmula molecular �nica.",
+      "Su consistencia semis�lida hace que normalmente se manipule y dosifique por masa.",
     ],
     preparationTypes: ["unknown"],
     safetyClassification: "educational",
@@ -307,12 +388,12 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     waterSolubility: {
       classification: "practicallyInsoluble",
       description:
-        "El talco es prácticamente insoluble en agua. Al mezclarse con agua no forma una solución verdadera.",
+        "El talco es pr�cticamente insoluble en agua. Al mezclarse con agua no forma una soluci�n verdadera.",
       temperatureDependence: null,
     },
     dissolutionBehavior: "unknown",
     observations: [
-      "Las partículas pueden permanecer dispersas y sedimentar con el tiempo.",
+      "Las part�culas pueden permanecer dispersas y sedimentar con el tiempo.",
     ],
     preparationTypes: ["suspension"],
     safetyClassification: "educational",
