@@ -10,6 +10,7 @@ import {
     View,
 } from "react-native";
 
+import DilutionPreparationCard from "../components/DilutionPreparationCard";
 import MoleFractionPreparationCard from "../components/MoleFractionPreparationCard";
 
 import {
@@ -99,6 +100,22 @@ export default function PreparacionLaboratorioScreen() {
 
     return findExactSubstance(component2Input) ?? null;
   }, [component2Input]);
+
+  const dilutionSubstance = useMemo(() => {
+    if (objective !== "dilution") {
+      return null;
+    }
+
+    if (component1 && component1.formula !== "H2O") {
+      return component1;
+    }
+
+    if (component2 && component2.formula !== "H2O") {
+      return component2;
+    }
+
+    return component1 ?? component2;
+  }, [objective, component1, component2]);
 
   const pairInteraction = useMemo(() => {
     if (!component1 || !component2) {
@@ -261,6 +278,10 @@ export default function PreparacionLaboratorioScreen() {
   }, [percentageComponent, component1, component2]);
 
   const availableMethods = useMemo<PreparationConcentrationMethod[]>(() => {
+    if (objective !== "combineComponents") {
+      return [];
+    }
+
     if (aqueousSolidSolute) {
       return [
         "molarity",
@@ -280,7 +301,7 @@ export default function PreparacionLaboratorioScreen() {
     }
 
     return [];
-  }, [aqueousSolidSolute, isLiquidLiquid, pairInteraction]);
+  }, [objective, aqueousSolidSolute, isLiquidLiquid, pairInteraction]);
 
   useEffect(() => {
     if (
@@ -564,14 +585,16 @@ export default function PreparacionLaboratorioScreen() {
       type: automaticPreparation.type,
 
       finalAmount:
-        concentrationUsesMassBasis && availableMethods.length > 0
+        objective === "dilution" ||
+        (concentrationUsesMassBasis && availableMethods.length > 0)
           ? undefined
           : Number.isFinite(cantidadNumerica) && cantidadNumerica > 0
             ? cantidadNumerica
             : undefined,
 
       finalUnit:
-        concentrationUsesMassBasis && availableMethods.length > 0
+        objective === "dilution" ||
+        (concentrationUsesMassBasis && availableMethods.length > 0)
           ? undefined
           : unidadFinal,
 
@@ -588,6 +611,7 @@ export default function PreparacionLaboratorioScreen() {
           : undefined,
     });
   }, [
+    objective,
     automaticPreparation,
     mixtureAnalysis,
     liquidLiquidBehavior,
@@ -1172,7 +1196,13 @@ export default function PreparacionLaboratorioScreen() {
           </View>
         )}
 
-        {availableMethods.length > 0 ? (
+        {objective === "dilution" ? (
+          <View style={styles.concentrationCard}>
+            <Text style={styles.smallLabel}>DILUCIÓN</Text>
+
+            <DilutionPreparationCard substance={dilutionSubstance} />
+          </View>
+        ) : availableMethods.length > 0 ? (
           <View style={styles.concentrationCard}>
             <Text style={styles.smallLabel}>CONCENTRACIÓN</Text>
 

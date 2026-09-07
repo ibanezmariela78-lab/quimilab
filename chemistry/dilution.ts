@@ -1,7 +1,9 @@
 import { parsePositiveNumber } from "@/chemistry/conversions";
 import { calculateMolarMass } from "@/chemistry/molarMass";
+import { findExactSubstance } from "@/chemistry/substances";
 
 export type DilutionConcentrationType = "molarity" | "normality";
+
 export type DilutionVolumeUnit = "mL" | "L";
 
 export type DilutionResult = {
@@ -20,7 +22,9 @@ export type DilutionResult = {
   safetyWarning?: string;
 };
 
-export type DilutionError = { error: string };
+export type DilutionError = {
+  error: string;
+};
 
 export function calculateDilution(
   substanceInput: string,
@@ -31,15 +35,29 @@ export function calculateDilution(
   volumeUnit: DilutionVolumeUnit,
 ): DilutionResult | DilutionError {
   const substance = substanceInput.trim();
-  if (!substance)
-    return { error: "Escribí la fórmula o nombre de la sustancia." };
+
+  if (!substance) {
+    return {
+      error: "Escribí la fórmula o nombre de la sustancia.",
+    };
+  }
 
   const initialConcentration = parsePositiveNumber(initialConcentrationInput);
-  if (initialConcentration === null)
-    return { error: "Ingresá una concentración inicial mayor que cero." };
+
+  if (initialConcentration === null) {
+    return {
+      error: "Ingresá una concentración inicial mayor que cero.",
+    };
+  }
+
   const finalConcentration = parsePositiveNumber(finalConcentrationInput);
-  if (finalConcentration === null)
-    return { error: "Ingresá una concentración final mayor que cero." };
+
+  if (finalConcentration === null) {
+    return {
+      error: "Ingresá una concentración final mayor que cero.",
+    };
+  }
+
   if (finalConcentration >= initialConcentration) {
     return {
       error:
@@ -48,35 +66,67 @@ export function calculateDilution(
   }
 
   const finalVolume = parsePositiveNumber(finalVolumeInput);
-  if (finalVolume === null)
-    return { error: "Ingresá un volumen final mayor que cero." };
+
+  if (finalVolume === null) {
+    return {
+      error: "Ingresá un volumen final mayor que cero.",
+    };
+  }
 
   const finalVolumeLiters =
     volumeUnit === "mL" ? finalVolume / 1000 : finalVolume;
+
   const stockVolumeLiters =
     (finalConcentration * finalVolumeLiters) / initialConcentration;
+
+  const stockVolume =
+    volumeUnit === "mL" ? stockVolumeLiters * 1000 : stockVolumeLiters;
+
+  const stockVolumeMilliliters = stockVolumeLiters * 1000;
+
+  const registeredSubstance = findExactSubstance(substance);
+
   const molarMass = calculateMolarMass(substance);
-  const normalizedSubstance = substance.replace(/\s+/gu, "");
-  const safetyWarning = ["HCl", "H2SO4", "HNO3", "NaOH"].includes(
-    normalizedSubstance,
-  )
-    ? "Esta preparación requiere supervisión docente y el uso de medidas de seguridad adecuadas."
-    : undefined;
+
+  const substanceName = registeredSubstance?.name ?? molarMass.substanceName;
+
+  let safetyWarning: string | undefined;
+
+  if (registeredSubstance?.safetyClassification === "highPrecaution") {
+    safetyWarning =
+      "Esta sustancia requiere precaución alta. La dilución debe realizarse únicamente con supervisión docente, elementos de protección adecuados y evaluación previa de los riesgos.";
+  } else if (
+    registeredSubstance?.safetyClassification === "requiresSupervision"
+  ) {
+    safetyWarning =
+      "Esta preparación requiere supervisión docente y el uso de las medidas de seguridad correspondientes.";
+  }
 
   return {
-    substance,
-    substanceName: molarMass.substanceName,
+    substance: registeredSubstance?.formula ?? substance,
+
+    substanceName,
+
     concentrationType,
+
     initialConcentration,
+
     finalConcentration,
+
     finalVolume,
+
     volumeUnit,
+
     finalVolumeLiters,
+
     stockVolumeLiters,
-    stockVolume:
-      volumeUnit === "mL" ? stockVolumeLiters * 1000 : stockVolumeLiters,
-    stockVolumeMilliliters: stockVolumeLiters * 1000,
+
+    stockVolume,
+
+    stockVolumeMilliliters,
+
     stockConcentration: initialConcentration,
+
     safetyWarning,
   };
 }
