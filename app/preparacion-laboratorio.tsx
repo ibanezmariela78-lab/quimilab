@@ -10,6 +10,7 @@ import {
     View,
 } from "react-native";
 
+import CommercialReagentPreparationCard from "../components/CommercialReagentPreparationCard";
 import DilutionPreparationCard from "../components/DilutionPreparationCard";
 import MoleFractionPreparationCard from "../components/MoleFractionPreparationCard";
 
@@ -44,7 +45,10 @@ import {
 
 import { labEquipment } from "../data/labEquipment";
 
-type PreparationObjective = "combineComponents" | "dilution";
+type PreparationObjective =
+  | "combineComponents"
+  | "dilution"
+  | "commercialReagent";
 
 type PreparationConcentrationMethod =
   | ConcentrationMethod
@@ -103,6 +107,22 @@ export default function PreparacionLaboratorioScreen() {
 
   const dilutionSubstance = useMemo(() => {
     if (objective !== "dilution") {
+      return null;
+    }
+
+    if (component1 && component1.formula !== "H2O") {
+      return component1;
+    }
+
+    if (component2 && component2.formula !== "H2O") {
+      return component2;
+    }
+
+    return component1 ?? component2;
+  }, [objective, component1, component2]);
+
+  const commercialSubstance = useMemo(() => {
+    if (objective !== "commercialReagent") {
       return null;
     }
 
@@ -563,6 +583,10 @@ export default function PreparacionLaboratorioScreen() {
     (isTraceMethod && traceMode === "mass-mass");
 
   const basePlan = useMemo(() => {
+    if (objective === "commercialReagent") {
+      return null;
+    }
+
     if (!automaticPreparation.type) {
       return null;
     }
@@ -1112,17 +1136,38 @@ export default function PreparacionLaboratorioScreen() {
               Preparar una solución menos concentrada.
             </Text>
           </Pressable>
+
+          <Pressable
+            style={[
+              styles.optionCard,
+              objective === "commercialReagent" && styles.optionActive,
+            ]}
+            onPress={() => setObjective("commercialReagent")}
+          >
+            <Text style={styles.optionTitle}>
+              Preparar desde reactivo comercial
+            </Text>
+
+            <Text style={styles.optionText}>
+              Usar porcentaje y densidad de la etiqueta para calcular la
+              concentración del reactivo y la cantidad teórica necesaria.
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.detectionCard}>
           <Text style={styles.detectionLabel}>DETECCIÓN AUTOMÁTICA</Text>
 
           <Text style={styles.detectionTitle}>
-            {automaticPreparation.title}
+            {objective === "commercialReagent"
+              ? "Preparación desde reactivo comercial"
+              : automaticPreparation.title}
           </Text>
 
           <Text style={styles.detectionText}>
-            {automaticPreparation.explanation}
+            {objective === "commercialReagent"
+              ? "QuimiLab utilizará los datos reales de porcentaje y densidad de la etiqueta para calcular la concentración comercial y el volumen teórico necesario. La manipulación de reactivos concentrados no se presenta como un procedimiento autónomo."
+              : automaticPreparation.explanation}
           </Text>
         </View>
 
@@ -1196,7 +1241,13 @@ export default function PreparacionLaboratorioScreen() {
           </View>
         )}
 
-        {objective === "dilution" ? (
+        {objective === "commercialReagent" ? (
+          <View style={styles.concentrationCard}>
+            <Text style={styles.smallLabel}>REACTIVO COMERCIAL</Text>
+
+            <CommercialReagentPreparationCard substance={commercialSubstance} />
+          </View>
+        ) : objective === "dilution" ? (
           <View style={styles.concentrationCard}>
             <Text style={styles.smallLabel}>DILUCIÓN</Text>
 
@@ -1561,72 +1612,76 @@ export default function PreparacionLaboratorioScreen() {
           </View>
         )}
 
-        {plan ? (
-          <>
-            <View style={styles.planCard}>
-              <Text style={styles.planLabel}>PLAN DE PREPARACIÓN</Text>
+        {objective !== "commercialReagent" ? (
+          plan ? (
+            <>
+              <View style={styles.planCard}>
+                <Text style={styles.planLabel}>PLAN DE PREPARACIÓN</Text>
 
-              <Text style={styles.planTitle}>{plan.title}</Text>
+                <Text style={styles.planTitle}>{plan.title}</Text>
 
-              <Text style={styles.planText}>{plan.description}</Text>
+                <Text style={styles.planText}>{plan.description}</Text>
+              </View>
+
+              {materiales.length > 0 && (
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>Materiales necesarios</Text>
+
+                  {materiales.map((material) => (
+                    <View key={material.id} style={styles.materialRow}>
+                      <Text style={styles.bullet}>•</Text>
+
+                      <View style={styles.flex}>
+                        <Text style={styles.materialName}>
+                          {material.nombre}
+                        </Text>
+
+                        <Text style={styles.body}>{material.porqueUsarlo}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {plan.steps.length > 0 && (
+                <View style={styles.card}>
+                  <Text style={styles.sectionTitle}>Procedimiento guiado</Text>
+
+                  {plan.steps.map((step, index) => (
+                    <View key={`${step}-${index}`} style={styles.step}>
+                      <View style={styles.stepNumber}>
+                        <Text style={styles.stepNumberText}>{index + 1}</Text>
+                      </View>
+
+                      <Text style={styles.stepText}>{step}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {plan.warnings.length > 0 && (
+                <View style={styles.warningCard}>
+                  <Text style={styles.warningTitle}>Atención</Text>
+
+                  {plan.warnings.map((warning) => (
+                    <Text key={warning} style={styles.warningText}>
+                      • {warning}
+                    </Text>
+                  ))}
+                </View>
+              )}
+            </>
+          ) : (
+            <View style={styles.pendingCard}>
+              <Text style={styles.pendingTitle}>Procedimiento pendiente</Text>
+
+              <Text style={styles.body}>
+                QuimiLab necesita información suficiente para generar un
+                procedimiento correcto.
+              </Text>
             </View>
-
-            {materiales.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Materiales necesarios</Text>
-
-                {materiales.map((material) => (
-                  <View key={material.id} style={styles.materialRow}>
-                    <Text style={styles.bullet}>•</Text>
-
-                    <View style={styles.flex}>
-                      <Text style={styles.materialName}>{material.nombre}</Text>
-
-                      <Text style={styles.body}>{material.porqueUsarlo}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {plan.steps.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Procedimiento guiado</Text>
-
-                {plan.steps.map((step, index) => (
-                  <View key={`${step}-${index}`} style={styles.step}>
-                    <View style={styles.stepNumber}>
-                      <Text style={styles.stepNumberText}>{index + 1}</Text>
-                    </View>
-
-                    <Text style={styles.stepText}>{step}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {plan.warnings.length > 0 && (
-              <View style={styles.warningCard}>
-                <Text style={styles.warningTitle}>Atención</Text>
-
-                {plan.warnings.map((warning) => (
-                  <Text key={warning} style={styles.warningText}>
-                    • {warning}
-                  </Text>
-                ))}
-              </View>
-            )}
-          </>
-        ) : (
-          <View style={styles.pendingCard}>
-            <Text style={styles.pendingTitle}>Procedimiento pendiente</Text>
-
-            <Text style={styles.body}>
-              QuimiLab necesita información suficiente para generar un
-              procedimiento correcto.
-            </Text>
-          </View>
-        )}
+          )
+        ) : null}
 
         <View style={styles.infoCard}>
           <Text style={styles.sectionTitle}>¿Cómo decide QuimiLab?</Text>
