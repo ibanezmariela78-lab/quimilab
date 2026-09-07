@@ -767,6 +767,7 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
   secondaryButton: {
+    display: "none",
     alignItems: "center",
     alignSelf: "flex-start",
     borderRadius: 9,
