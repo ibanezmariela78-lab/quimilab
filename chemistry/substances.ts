@@ -3,6 +3,7 @@ import type { SubstanceInfo } from "@/chemistry/types";
 const commonSubstances: Record<string, SubstanceInfo> = {
   H2O: {
     name: "Agua",
+    aliases: ["Agua destilada"],
     physicalState: "liquid",
     waterSolubility: {
       classification: "miscible",
@@ -23,6 +24,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
 
   NaCl: {
     name: "Cloruro de sodio",
+    aliases: ["Sal común"],
     physicalState: "solid",
     waterSolubility: {
       classification: "soluble",
@@ -139,6 +141,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
 
   NaHCO3: {
     name: "Bicarbonato de sodio",
+    aliases: ["Bicarbonato"],
     physicalState: "solid",
     waterSolubility: {
       classification: "soluble",
@@ -233,6 +236,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
 
   C2H5OH: {
     name: "Etanol",
+    aliases: ["Alcohol etílico"],
     physicalState: "liquid",
     waterSolubility: {
       classification: "miscible",
@@ -263,6 +267,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
 
   C3H8O3: {
     name: "Glicerol",
+    aliases: ["Glicerina"],
     physicalState: "viscousLiquid",
     waterSolubility: {
       classification: "miscible",
@@ -279,6 +284,7 @@ const commonSubstances: Record<string, SubstanceInfo> = {
 
   PETROLATUM: {
     name: "Petrolato (vaselina)",
+    aliases: ["Petrolato", "Vaselina"],
     physicalState: "semisolid",
     waterSolubility: {
       classification: "practicallyInsoluble",
@@ -332,10 +338,13 @@ export function findSubstanceRecords(query: string): SubstanceRecord[] {
   }
 
   return getSubstanceRecords().filter((substance) => {
-    const formula = normalizeSearchValue(substance.formula);
-    const name = normalizeSearchValue(substance.name);
+    const searchableValues = [
+      substance.formula,
+      substance.name,
+      ...(substance.aliases ?? []),
+    ].map(normalizeSearchValue);
 
-    return formula.includes(normalizedQuery) || name.includes(normalizedQuery);
+    return searchableValues.some((value) => value.includes(normalizedQuery));
   });
 }
 
@@ -347,10 +356,13 @@ export function findExactSubstance(query: string): SubstanceRecord | undefined {
   }
 
   return getSubstanceRecords().find((substance) => {
-    const formula = normalizeSearchValue(substance.formula);
-    const name = normalizeSearchValue(substance.name);
+    const searchableValues = [
+      substance.formula,
+      substance.name,
+      ...(substance.aliases ?? []),
+    ].map(normalizeSearchValue);
 
-    return formula === normalizedQuery || name === normalizedQuery;
+    return searchableValues.some((value) => value === normalizedQuery);
   });
 }
 
@@ -359,12 +371,28 @@ export function getSubstanceName(formula: string): string | undefined {
 }
 
 export function getSubstanceInfo(formula: string): SubstanceInfo | undefined {
-  const normalizedFormula = formula
-    .trim()
-    .replace(/\s+/gu, "")
-    .replace(/\./g, "·");
+  const normalizedValue = normalizeSearchValue(formula);
 
-  return commonSubstances[normalizedFormula];
+  if (!normalizedValue) {
+    return undefined;
+  }
+
+  const directEntry = Object.entries(commonSubstances).find(
+    ([key]) => normalizeSearchValue(key) === normalizedValue
+  );
+
+  if (directEntry) {
+    return directEntry[1];
+  }
+
+  return Object.values(commonSubstances).find((info) => {
+    const searchableValues = [
+      info.name,
+      ...(info.aliases ?? []),
+    ].map(normalizeSearchValue);
+
+    return searchableValues.some((value) => value === normalizedValue);
+  });
 }
 
 function normalizeSearchValue(value: string): string {

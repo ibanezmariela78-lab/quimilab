@@ -27,6 +27,10 @@ export type MolarMassCalculation = {
 
 export type SubstanceInfo = {
   name: string;
+  aliases?: string[];
+  densityGPerMl?: number | null;
+  densityTemperatureC?: number | null;
+  densityNote?: string | null;
   safetyClassification?:
     | "educational"
     | "requiresSupervision"
