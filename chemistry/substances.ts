@@ -261,6 +261,40 @@ const commonSubstances: Record<string, SubstanceInfo> = {
     safetyClassification: "highPrecaution",
   },
 
+  C3H8O3: {
+    name: "Glicerol",
+    physicalState: "viscousLiquid",
+    waterSolubility: {
+      classification: "miscible",
+      description: "El glicerol es miscible con agua.",
+      temperatureDependence: null,
+    },
+    dissolutionBehavior: "unknown",
+    observations: [
+      "Es un líquido viscoso. Su viscosidad puede dificultar la medición volumétrica y la transferencia completa entre recipientes.",
+    ],
+    preparationTypes: ["solution", "unknown"],
+    safetyClassification: "educational",
+  },
+
+  PETROLATUM: {
+    name: "Petrolato (vaselina)",
+    physicalState: "semisolid",
+    waterSolubility: {
+      classification: "practicallyInsoluble",
+      description:
+        "El petrolato es prácticamente insoluble en agua y no forma una solución acuosa verdadera.",
+      temperatureDependence: null,
+    },
+    dissolutionBehavior: "unknown",
+    observations: [
+      "El petrolato es una mezcla semisólida de hidrocarburos y no posee una fórmula molecular única.",
+      "Su consistencia semisólida hace que normalmente se manipule y dosifique por masa.",
+    ],
+    preparationTypes: ["unknown"],
+    safetyClassification: "educational",
+  },
+
   "Mg3Si4O10(OH)2": {
     name: "Talco",
     physicalState: "solid",
@@ -299,7 +333,6 @@ export function findSubstanceRecords(query: string): SubstanceRecord[] {
 
   return getSubstanceRecords().filter((substance) => {
     const formula = normalizeSearchValue(substance.formula);
-
     const name = normalizeSearchValue(substance.name);
 
     return formula.includes(normalizedQuery) || name.includes(normalizedQuery);
@@ -315,7 +348,6 @@ export function findExactSubstance(query: string): SubstanceRecord | undefined {
 
   return getSubstanceRecords().find((substance) => {
     const formula = normalizeSearchValue(substance.formula);
-
     const name = normalizeSearchValue(substance.name);
 
     return formula === normalizedQuery || name === normalizedQuery;

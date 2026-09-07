@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+﻿import { Stack } from "expo-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
@@ -372,7 +372,7 @@ export default function PreparacionLaboratorioScreen() {
           return {
             method: "molarity",
             error:
-              "La molaridad requiere una solución y un volumen final expresado en mL o L.",
+              "La molaridad requiere una soluciÃ³n y un volumen final expresado en mL o L.",
           };
         }
 
@@ -411,7 +411,7 @@ export default function PreparacionLaboratorioScreen() {
           return {
             method: "normality",
             error:
-              "La normalidad requiere una solución y un volumen final expresado en mL o L.",
+              "La normalidad requiere una soluciÃ³n y un volumen final expresado en mL o L.",
           };
         }
 
@@ -472,7 +472,7 @@ export default function PreparacionLaboratorioScreen() {
           return {
             method: "volumeVolumePercentage",
             error:
-              "El porcentaje v/v requiere un componente líquido y un volumen final expresado en mL o L.",
+              "El porcentaje v/v requiere un componente lÃ­quido y un volumen final expresado en mL o L.",
           };
         }
 
@@ -553,7 +553,7 @@ export default function PreparacionLaboratorioScreen() {
         unit: concentrationMethod,
         mode: "dilute-aqueous",
         error:
-          "La solución acuosa diluida requiere un volumen final expresado en mL o L.",
+          "La soluciÃ³n acuosa diluida requiere un volumen final expresado en mL o L.",
       };
     }
 
@@ -665,10 +665,10 @@ export default function PreparacionLaboratorioScreen() {
     const result = concentrationCalculation.result;
 
     return {
-      title: "Preparación de una solución por molalidad",
+      title: "PreparaciÃ³n de una soluciÃ³n por molalidad",
 
       description:
-        "La preparación se realiza utilizando la masa del solvente y la masa de soluto calculada.",
+        "La preparaciÃ³n se realiza utilizando la masa del solvente y la masa de soluto calculada.",
 
       equipmentIds: [
         "balance",
@@ -679,27 +679,27 @@ export default function PreparacionLaboratorioScreen() {
       ],
 
       steps: [
-        "Reuní todos los materiales necesarios.",
-        "Colocá un recipiente limpio y seco sobre la balanza y tará la balanza.",
-        `Pesá ${formatNumber(
+        "ReunÃ­ todos los materiales necesarios.",
+        "ColocÃ¡ un recipiente limpio y seco sobre la balanza y tarÃ¡ la balanza.",
+        `PesÃ¡ ${formatNumber(
           result.solventMass,
         )} ${result.solventMassUnit} de agua.`,
-        "Utilizá otro recipiente adecuado para pesar el soluto.",
-        `Pesá ${formatNumber(result.gramsNeeded, 2)} g de ${result.formula}.`,
-        "Agregá gradualmente el soluto al solvente pesado.",
-        "Mezclá hasta lograr la disolución cuando sea químicamente posible.",
-        "Homogeneizá la preparación.",
-        `Rotulá indicando ${result.formula}, ${formatNumber(
+        "UtilizÃ¡ otro recipiente adecuado para pesar el soluto.",
+        `PesÃ¡ ${formatNumber(result.gramsNeeded, 2)} g de ${result.formula}.`,
+        "AgregÃ¡ gradualmente el soluto al solvente pesado.",
+        "MezclÃ¡ hasta lograr la disoluciÃ³n cuando sea quÃ­micamente posible.",
+        "HomogeneizÃ¡ la preparaciÃ³n.",
+        `RotulÃ¡ indicando ${result.formula}, ${formatNumber(
           result.molality,
         )} mol/kg y fecha.`,
       ],
 
       warnings: [
-        "La masa de solvente no es la masa total de la solución.",
+        "La masa de solvente no es la masa total de la soluciÃ³n.",
         "La molalidad no utiliza el volumen final.",
         "No corresponde completar hasta la marca de un matraz aforado.",
         ...(safetyLevel === "supervision"
-          ? ["Esta preparación requiere supervisión docente."]
+          ? ["Esta preparaciÃ³n requiere supervisiÃ³n docente."]
           : []),
       ],
 
@@ -721,10 +721,10 @@ export default function PreparacionLaboratorioScreen() {
     const result = concentrationCalculation.result;
 
     return {
-      title: "Preparación por porcentaje masa en masa",
+      title: "PreparaciÃ³n por porcentaje masa en masa",
 
       description:
-        "La preparación se realiza por pesada de los componentes hasta obtener la masa final indicada.",
+        "La preparaciÃ³n se realiza por pesada de los componentes hasta obtener la masa final indicada.",
 
       equipmentIds: [
         "balance",
@@ -735,20 +735,20 @@ export default function PreparacionLaboratorioScreen() {
       ],
 
       steps: [
-        "Reuní los materiales necesarios.",
-        "Colocá el recipiente para pesada sobre la balanza y tará la balanza.",
-        `Pesá ${formatNumber(result.componentAmountBase, 2)} g de ${
+        "ReunÃ­ los materiales necesarios.",
+        "ColocÃ¡ el recipiente para pesada sobre la balanza y tarÃ¡ la balanza.",
+        `PesÃ¡ ${formatNumber(result.componentAmountBase, 2)} g de ${
           percentageComponent?.name ?? result.component
         }.`,
         result.remainingAmountBase !== undefined
-          ? `Pesá ${formatNumber(result.remainingAmountBase, 2)} g de ${
-              otherComponent?.name ?? "los demás componentes"
+          ? `PesÃ¡ ${formatNumber(result.remainingAmountBase, 2)} g de ${
+              otherComponent?.name ?? "los demÃ¡s componentes"
             }.`
-          : "Determiná la masa restante de los demás componentes.",
-        "Transferí los componentes a un recipiente adecuado.",
-        "Mezclá y homogeneizá la preparación.",
-        "Verificá que la masa total corresponda a la masa final indicada.",
-        `Rotulá indicando ${
+          : "DeterminÃ¡ la masa restante de los demÃ¡s componentes.",
+        "TransferÃ­ los componentes a un recipiente adecuado.",
+        "MezclÃ¡ y homogeneizÃ¡ la preparaciÃ³n.",
+        "VerificÃ¡ que la masa total corresponda a la masa final indicada.",
+        `RotulÃ¡ indicando ${
           percentageComponent?.name ?? result.component
         }, ${formatNumber(result.percentage)} % m/m y fecha.`,
       ],
@@ -757,7 +757,7 @@ export default function PreparacionLaboratorioScreen() {
         "El porcentaje m/m utiliza la masa total final de la mezcla.",
         "La masa de cada componente forma parte de esa masa final.",
         ...(safetyLevel === "supervision"
-          ? ["Esta preparación requiere supervisión docente."]
+          ? ["Esta preparaciÃ³n requiere supervisiÃ³n docente."]
           : []),
       ],
 
@@ -785,10 +785,10 @@ export default function PreparacionLaboratorioScreen() {
     const result = concentrationCalculation.result;
 
     return {
-      title: "Preparación por porcentaje masa en volumen",
+      title: "PreparaciÃ³n por porcentaje masa en volumen",
 
       description:
-        "Se pesa el soluto y luego se completa la solución hasta alcanzar el volumen final indicado.",
+        "Se pesa el soluto y luego se completa la soluciÃ³n hasta alcanzar el volumen final indicado.",
 
       equipmentIds: [
         "balance",
@@ -802,29 +802,29 @@ export default function PreparacionLaboratorioScreen() {
       ],
 
       steps: [
-        "Reuní todos los materiales necesarios.",
-        "Colocá un recipiente para pesada sobre la balanza y tará la balanza.",
-        `Pesá ${formatNumber(result.componentAmountBase, 2)} g de ${
+        "ReunÃ­ todos los materiales necesarios.",
+        "ColocÃ¡ un recipiente para pesada sobre la balanza y tarÃ¡ la balanza.",
+        `PesÃ¡ ${formatNumber(result.componentAmountBase, 2)} g de ${
           percentageComponent?.name ?? result.component
         }.`,
-        "Colocá una cantidad de solvente menor al volumen final en un vaso de precipitados.",
-        "Agregá el soluto y mezclá hasta lograr la disolución cuando sea posible.",
-        "Transferí la solución al matraz aforado.",
-        "Enjuagá el vaso y agregá los lavados al matraz.",
-        `Completá cuidadosamente hasta el volumen final de ${formatNumber(
+        "ColocÃ¡ una cantidad de solvente menor al volumen final en un vaso de precipitados.",
+        "AgregÃ¡ el soluto y mezclÃ¡ hasta lograr la disoluciÃ³n cuando sea posible.",
+        "TransferÃ­ la soluciÃ³n al matraz aforado.",
+        "EnjuagÃ¡ el vaso y agregÃ¡ los lavados al matraz.",
+        `CompletÃ¡ cuidadosamente hasta el volumen final de ${formatNumber(
           result.finalAmount,
         )} ${result.finalUnit}.`,
-        "Tapá y homogeneizá.",
-        `Rotulá indicando ${
+        "TapÃ¡ y homogeneizÃ¡.",
+        `RotulÃ¡ indicando ${
           percentageComponent?.name ?? result.component
         }, ${formatNumber(result.percentage)} % m/v y fecha.`,
       ],
 
       warnings: [
-        "El volumen indicado es el volumen final de la solución.",
+        "El volumen indicado es el volumen final de la soluciÃ³n.",
         "No significa agregar el soluto a esa cantidad inicial de solvente.",
         ...(safetyLevel === "supervision"
-          ? ["Esta preparación requiere supervisión docente."]
+          ? ["Esta preparaciÃ³n requiere supervisiÃ³n docente."]
           : []),
       ],
 
@@ -851,10 +851,10 @@ export default function PreparacionLaboratorioScreen() {
     const result = concentrationCalculation.result;
 
     return {
-      title: "Preparación por porcentaje volumen en volumen",
+      title: "PreparaciÃ³n por porcentaje volumen en volumen",
 
       description:
-        "Se mide el volumen del componente líquido y se completa la preparación hasta alcanzar el volumen final indicado.",
+        "Se mide el volumen del componente lÃ­quido y se completa la preparaciÃ³n hasta alcanzar el volumen final indicado.",
 
       equipmentIds: [
         "graduated-cylinder",
@@ -864,27 +864,27 @@ export default function PreparacionLaboratorioScreen() {
       ],
 
       steps: [
-        "Reuní el material volumétrico necesario.",
-        `Medí ${formatNumber(result.componentAmountBase, 2)} mL de ${
+        "ReunÃ­ el material volumÃ©trico necesario.",
+        `MedÃ­ ${formatNumber(result.componentAmountBase, 2)} mL de ${
           percentageComponent?.name ?? result.component
         }.`,
-        "Transferí el componente al recipiente volumétrico adecuado.",
-        "Agregá parcialmente el segundo componente.",
-        `Completá cuidadosamente hasta alcanzar un volumen final de ${formatNumber(
+        "TransferÃ­ el componente al recipiente volumÃ©trico adecuado.",
+        "AgregÃ¡ parcialmente el segundo componente.",
+        `CompletÃ¡ cuidadosamente hasta alcanzar un volumen final de ${formatNumber(
           result.finalAmount,
         )} ${result.finalUnit}.`,
-        "Tapá y homogeneizá la preparación.",
-        "Verificá que la mezcla permanezca en una única fase cuando corresponda.",
-        `Rotulá indicando ${
+        "TapÃ¡ y homogeneizÃ¡ la preparaciÃ³n.",
+        "VerificÃ¡ que la mezcla permanezca en una Ãºnica fase cuando corresponda.",
+        `RotulÃ¡ indicando ${
           percentageComponent?.name ?? result.component
         }, ${formatNumber(result.percentage)} % v/v y fecha.`,
       ],
 
       warnings: [
         "No debe suponerse que el volumen del segundo componente es simplemente el volumen final menos el volumen del primero.",
-        "Los volúmenes de dos líquidos no siempre son perfectamente aditivos.",
+        "Los volÃºmenes de dos lÃ­quidos no siempre son perfectamente aditivos.",
         ...(safetyLevel === "supervision"
-          ? ["Esta preparación requiere supervisión docente."]
+          ? ["Esta preparaciÃ³n requiere supervisiÃ³n docente."]
           : []),
       ],
 
@@ -913,10 +913,10 @@ export default function PreparacionLaboratorioScreen() {
 
     if (traceMode === "mass-mass") {
       return {
-        title: `Preparación en ${result.unit} por masa`,
+        title: `PreparaciÃ³n en ${result.unit} por masa`,
 
         description:
-          "La concentración traza se calcula respecto de la masa total final de la mezcla.",
+          "La concentraciÃ³n traza se calcula respecto de la masa total final de la mezcla.",
 
         equipmentIds: [
           "balance",
@@ -927,14 +927,14 @@ export default function PreparacionLaboratorioScreen() {
         ],
 
         steps: [
-          "Reuní los materiales necesarios.",
-          "Verificá que la balanza tenga resolución suficiente para medir la masa calculada.",
-          `Medí ${componentMassText} de ${aqueousSolidSolute?.name ?? result.component}.`,
-          `Completá la preparación hasta una masa final de ${formatNumber(
+          "ReunÃ­ los materiales necesarios.",
+          "VerificÃ¡ que la balanza tenga resoluciÃ³n suficiente para medir la masa calculada.",
+          `MedÃ­ ${componentMassText} de ${aqueousSolidSolute?.name ?? result.component}.`,
+          `CompletÃ¡ la preparaciÃ³n hasta una masa final de ${formatNumber(
             result.finalAmount,
           )} ${result.finalUnit}.`,
-          "Homogeneizá cuidadosamente la mezcla.",
-          `Rotulá indicando ${formatNumber(
+          "HomogeneizÃ¡ cuidadosamente la mezcla.",
+          `RotulÃ¡ indicando ${formatNumber(
             result.concentration,
           )} ${result.unit} y fecha.`,
         ],
@@ -943,9 +943,9 @@ export default function PreparacionLaboratorioScreen() {
           result.unit === "ppm"
             ? "En base masa/masa, 1 ppm equivale a 1 mg de componente por kilogramo de mezcla."
             : "En base masa/masa, 1 ppb equivale a 1 microgramo de componente por kilogramo de mezcla.",
-          "Si la masa calculada es menor que la resolución de la balanza disponible, no debe pesarse directamente. Debe utilizarse una solución madre y realizar una dilución adecuada.",
+          "Si la masa calculada es menor que la resoluciÃ³n de la balanza disponible, no debe pesarse directamente. Debe utilizarse una soluciÃ³n madre y realizar una diluciÃ³n adecuada.",
           ...(safetyLevel === "supervision"
-            ? ["Esta preparación requiere supervisión docente."]
+            ? ["Esta preparaciÃ³n requiere supervisiÃ³n docente."]
             : []),
         ],
 
@@ -954,10 +954,10 @@ export default function PreparacionLaboratorioScreen() {
     }
 
     return {
-      title: `Preparación acuosa en ${result.unit}`,
+      title: `PreparaciÃ³n acuosa en ${result.unit}`,
 
       description:
-        "La concentración se calcula mediante la aproximación válida para soluciones acuosas suficientemente diluidas y con densidad cercana a 1 kg/L.",
+        "La concentraciÃ³n se calcula mediante la aproximaciÃ³n vÃ¡lida para soluciones acuosas suficientemente diluidas y con densidad cercana a 1 kg/L.",
 
       equipmentIds: [
         "balance",
@@ -971,27 +971,27 @@ export default function PreparacionLaboratorioScreen() {
       ],
 
       steps: [
-        "Reuní los materiales necesarios.",
-        "Verificá que el instrumental disponible tenga resolución suficiente para medir la cantidad calculada.",
-        `La cantidad teórica necesaria es ${componentMassText} de ${aqueousSolidSolute?.name ?? result.component}.`,
-        "Si esa cantidad puede medirse con precisión, prepará inicialmente una solución con una cantidad de agua menor al volumen final.",
-        "Transferí cuantitativamente la preparación al matraz aforado.",
-        `Completá cuidadosamente hasta un volumen final de ${formatNumber(
+        "ReunÃ­ los materiales necesarios.",
+        "VerificÃ¡ que el instrumental disponible tenga resoluciÃ³n suficiente para medir la cantidad calculada.",
+        `La cantidad teÃ³rica necesaria es ${componentMassText} de ${aqueousSolidSolute?.name ?? result.component}.`,
+        "Si esa cantidad puede medirse con precisiÃ³n, preparÃ¡ inicialmente una soluciÃ³n con una cantidad de agua menor al volumen final.",
+        "TransferÃ­ cuantitativamente la preparaciÃ³n al matraz aforado.",
+        `CompletÃ¡ cuidadosamente hasta un volumen final de ${formatNumber(
           result.finalAmount,
         )} ${result.finalUnit}.`,
-        "Tapá y homogeneizá.",
-        `Rotulá indicando ${formatNumber(
+        "TapÃ¡ y homogeneizÃ¡.",
+        `RotulÃ¡ indicando ${formatNumber(
           result.concentration,
         )} ${result.unit} y fecha.`,
       ],
 
       warnings: [
         result.warning ??
-          "La relación utilizada es una aproximación para soluciones acuosas diluidas.",
-        "Para concentraciones muy bajas, la pesada directa puede no ser técnicamente posible con una balanza de laboratorio escolar.",
-        "Si la cantidad calculada es menor que la resolución del instrumental, corresponde preparar una solución madre de concentración conocida y luego realizar una dilución.",
+          "La relaciÃ³n utilizada es una aproximaciÃ³n para soluciones acuosas diluidas.",
+        "Para concentraciones muy bajas, la pesada directa puede no ser tÃ©cnicamente posible con una balanza de laboratorio escolar.",
+        "Si la cantidad calculada es menor que la resoluciÃ³n del instrumental, corresponde preparar una soluciÃ³n madre de concentraciÃ³n conocida y luego realizar una diluciÃ³n.",
         ...(safetyLevel === "supervision"
-          ? ["Esta preparación requiere supervisión docente."]
+          ? ["Esta preparaciÃ³n requiere supervisiÃ³n docente."]
           : []),
       ],
 
@@ -1081,7 +1081,7 @@ export default function PreparacionLaboratorioScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Preparación de laboratorio",
+          title: "PreparaciÃ³n de laboratorio",
         }}
       />
 
@@ -1090,11 +1090,11 @@ export default function PreparacionLaboratorioScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Preparación de laboratorio</Text>
+        <Text style={styles.title}>PreparaciÃ³n de laboratorio</Text>
 
         <Text style={styles.subtitle}>
-          Ingresá los componentes. QuimiLab analiza las sustancias, determina
-          el tipo de preparación y selecciona los cálculos y materiales
+          IngresÃ¡ los componentes. QuimiLab analiza las sustancias, determina
+          el tipo de preparaciÃ³n y selecciona los cÃ¡lculos y materiales
           adecuados.
         </Text>
 
@@ -1113,7 +1113,7 @@ export default function PreparacionLaboratorioScreen() {
         />
 
         <View style={styles.inputCard}>
-          <Text style={styles.sectionTitle}>Objetivo de la preparación</Text>
+          <Text style={styles.sectionTitle}>Objetivo de la preparaciÃ³n</Text>
 
           <Pressable
             style={[
@@ -1125,7 +1125,7 @@ export default function PreparacionLaboratorioScreen() {
             <Text style={styles.optionTitle}>Combinar los componentes</Text>
 
             <Text style={styles.optionText}>
-              Analizar solubilidad, miscibilidad y tipo de preparación.
+              Analizar solubilidad, miscibilidad y tipo de preparaciÃ³n.
             </Text>
           </Pressable>
 
@@ -1136,10 +1136,10 @@ export default function PreparacionLaboratorioScreen() {
             ]}
             onPress={() => setObjective("dilution")}
           >
-            <Text style={styles.optionTitle}>Diluir una solución madre</Text>
+            <Text style={styles.optionTitle}>Diluir una soluciÃ³n madre</Text>
 
             <Text style={styles.optionText}>
-              Preparar una solución menos concentrada.
+              Preparar una soluciÃ³n menos concentrada.
             </Text>
           </Pressable>
 
@@ -1156,30 +1156,30 @@ export default function PreparacionLaboratorioScreen() {
 
             <Text style={styles.optionText}>
               Usar porcentaje y densidad de la etiqueta para calcular la
-              concentración del reactivo y la cantidad teórica necesaria.
+              concentraciÃ³n del reactivo y la cantidad teÃ³rica necesaria.
             </Text>
           </Pressable>
         </View>
 
         <View style={styles.detectionCard}>
-          <Text style={styles.detectionLabel}>DETECCIÓN AUTOMÁTICA</Text>
+          <Text style={styles.detectionLabel}>DETECCIÃ“N AUTOMÃTICA</Text>
 
           <Text style={styles.detectionTitle}>
             {objective === "commercialReagent"
-              ? "Preparación desde reactivo comercial"
+              ? "PreparaciÃ³n desde reactivo comercial"
               : automaticPreparation.title}
           </Text>
 
           <Text style={styles.detectionText}>
             {objective === "commercialReagent"
-              ? "QuimiLab utilizará los datos reales de porcentaje y densidad de la etiqueta para calcular la concentración comercial y el volumen teórico necesario. La manipulación de reactivos concentrados no se presenta como un procedimiento autónomo."
+              ? "QuimiLab utilizarÃ¡ los datos reales de porcentaje y densidad de la etiqueta para calcular la concentraciÃ³n comercial y el volumen teÃ³rico necesario. La manipulaciÃ³n de reactivos concentrados no se presenta como un procedimiento autÃ³nomo."
               : automaticPreparation.explanation}
           </Text>
         </View>
 
         {component1 && component2 && objective === "combineComponents" && (
           <View style={styles.card}>
-            <Text style={styles.smallLabel}>ANÁLISIS DE LOS COMPONENTES</Text>
+            <Text style={styles.smallLabel}>ANÃLISIS DE LOS COMPONENTES</Text>
 
             <Text style={styles.cardTitle}>
               {component1.name} + {component2.name}
@@ -1206,8 +1206,8 @@ export default function PreparacionLaboratorioScreen() {
                 </>
               ) : (
                 <Text style={styles.body}>
-                  QuimiLab todavía no dispone de información específica sobre
-                  la interacción entre estos líquidos.
+                  QuimiLab todavÃ­a no dispone de informaciÃ³n especÃ­fica sobre
+                  la interacciÃ³n entre estos lÃ­quidos.
                 </Text>
               )
             ) : waterBasedInteraction ? (
@@ -1230,7 +1230,7 @@ export default function PreparacionLaboratorioScreen() {
 
                 {waterBasedInteraction.warning ? (
                   <View style={styles.warningInside}>
-                    <Text style={styles.warningTitle}>Observación</Text>
+                    <Text style={styles.warningTitle}>ObservaciÃ³n</Text>
 
                     <Text style={styles.warningText}>
                       {waterBasedInteraction.warning}
@@ -1240,8 +1240,8 @@ export default function PreparacionLaboratorioScreen() {
               </>
             ) : (
               <Text style={styles.body}>
-                QuimiLab todavía no posee información suficiente sobre esta
-                interacción.
+                QuimiLab todavÃ­a no posee informaciÃ³n suficiente sobre esta
+                interacciÃ³n.
               </Text>
             )}
           </View>
@@ -1255,16 +1255,16 @@ export default function PreparacionLaboratorioScreen() {
           </View>
         ) : objective === "dilution" ? (
           <View style={styles.concentrationCard}>
-            <Text style={styles.smallLabel}>DILUCIÓN</Text>
+            <Text style={styles.smallLabel}>DILUCIÃ“N</Text>
 
             <DilutionPreparationCard substance={dilutionSubstance} />
           </View>
         ) : availableMethods.length > 0 ? (
           <View style={styles.concentrationCard}>
-            <Text style={styles.smallLabel}>CONCENTRACIÓN</Text>
+            <Text style={styles.smallLabel}>CONCENTRACIÃ“N</Text>
 
             <Text style={styles.cardTitle}>
-              ¿Cómo querés expresar la concentración?
+              Â¿CÃ³mo querÃ©s expresar la concentraciÃ³n?
             </Text>
 
             <View style={styles.methodRow}>
@@ -1324,7 +1324,7 @@ export default function PreparacionLaboratorioScreen() {
 
                 {isTraceMethod ? (
                   <>
-                    <Text style={styles.label}>Base de concentración</Text>
+                    <Text style={styles.label}>Base de concentraciÃ³n</Text>
 
                     <View style={styles.unitRow}>
                       <Pressable
@@ -1342,7 +1342,7 @@ export default function PreparacionLaboratorioScreen() {
                               styles.unitTextActive,
                           ]}
                         >
-                          Solución acuosa diluida
+                          SoluciÃ³n acuosa diluida
                         </Text>
                       </Pressable>
 
@@ -1367,7 +1367,7 @@ export default function PreparacionLaboratorioScreen() {
                     {traceMode === "dilute-aqueous" ? (
                       <>
                         <Text style={styles.label}>
-                          Volumen final de solución
+                          Volumen final de soluciÃ³n
                         </Text>
 
                         <TextInput
@@ -1401,7 +1401,7 @@ export default function PreparacionLaboratorioScreen() {
 
                         <Text style={styles.helper}>
                           Para soluciones acuosas diluidas, QuimiLab utiliza la
-                          aproximación basada en una densidad cercana a 1 kg/L.
+                          aproximaciÃ³n basada en una densidad cercana a 1 kg/L.
                         </Text>
                       </>
                     ) : (
@@ -1442,7 +1442,7 @@ export default function PreparacionLaboratorioScreen() {
                         </View>
 
                         <Text style={styles.helper}>
-                          Esta opción calcula ppm o ppb directamente respecto
+                          Esta opciÃ³n calcula ppm o ppb directamente respecto
                           de la masa total de la mezcla.
                         </Text>
                       </>
@@ -1585,7 +1585,7 @@ export default function PreparacionLaboratorioScreen() {
           </View>
         ) : (
           <View style={styles.inputCard}>
-            <Text style={styles.label}>Cantidad o volumen de preparación</Text>
+            <Text style={styles.label}>Cantidad o volumen de preparaciÃ³n</Text>
 
             <TextInput
               value={cantidadFinal}
@@ -1622,7 +1622,7 @@ export default function PreparacionLaboratorioScreen() {
           plan ? (
             <>
               <View style={styles.planCard}>
-                <Text style={styles.planLabel}>PLAN DE PREPARACIÓN</Text>
+                <Text style={styles.planLabel}>PLAN DE PREPARACIÃ“N</Text>
 
                 <Text style={styles.planTitle}>{plan.title}</Text>
 
@@ -1635,7 +1635,7 @@ export default function PreparacionLaboratorioScreen() {
 
                   {materiales.map((material) => (
                     <View key={material.id} style={styles.materialRow}>
-                      <Text style={styles.bullet}>•</Text>
+                      <Text style={styles.bullet}>â€¢</Text>
 
                       <View style={styles.flex}>
                         <Text style={styles.materialName}>
@@ -1667,11 +1667,11 @@ export default function PreparacionLaboratorioScreen() {
 
               {plan.warnings.length > 0 && (
                 <View style={styles.warningCard}>
-                  <Text style={styles.warningTitle}>Atención</Text>
+                  <Text style={styles.warningTitle}>AtenciÃ³n</Text>
 
                   {plan.warnings.map((warning) => (
                     <Text key={warning} style={styles.warningText}>
-                      • {warning}
+                      â€¢ {warning}
                     </Text>
                   ))}
                 </View>
@@ -1682,7 +1682,7 @@ export default function PreparacionLaboratorioScreen() {
               <Text style={styles.pendingTitle}>Procedimiento pendiente</Text>
 
               <Text style={styles.body}>
-                QuimiLab necesita información suficiente para generar un
+                QuimiLab necesita informaciÃ³n suficiente para generar un
                 procedimiento correcto.
               </Text>
             </View>
@@ -1690,12 +1690,12 @@ export default function PreparacionLaboratorioScreen() {
         ) : null}
 
         <View style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>¿Cómo decide QuimiLab?</Text>
+          <Text style={styles.sectionTitle}>Â¿CÃ³mo decide QuimiLab?</Text>
 
           <Text style={styles.body}>
-            QuimiLab analiza las sustancias, su interacción, el método de
-            concentración y el nivel de seguridad antes de generar los
-            cálculos, materiales y procedimiento.
+            QuimiLab analiza las sustancias, su interacciÃ³n, el mÃ©todo de
+            concentraciÃ³n y el nivel de seguridad antes de generar los
+            cÃ¡lculos, materiales y procedimiento.
           </Text>
         </View>
       </ScrollView>
@@ -1724,10 +1724,10 @@ function FormalityResultView({
     <>
       <View style={styles.calculationBox}>
         <Text style={styles.calculationTitle}>
-          Cantidad de unidades fórmula
+          Cantidad de unidades fÃ³rmula
         </Text>
 
-        <Text style={styles.equation}>n fórmula = F × V</Text>
+        <Text style={styles.equation}>n fÃ³rmula = F Ã— V</Text>
 
         <Text style={styles.strong}>
           {formatNumber(result.formulaMoles)} mol
@@ -1735,21 +1735,21 @@ function FormalityResultView({
 
         <Text style={styles.calculationTitle}>Masa necesaria</Text>
 
-        <Text style={styles.equation}>masa = n fórmula × masa fórmula</Text>
+        <Text style={styles.equation}>masa = n fÃ³rmula Ã— masa fÃ³rmula</Text>
       </View>
 
       <ResultBox>
         {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
         {"\n"}
         para preparar {formatNumber(result.volume)} {result.volumeUnit} de
-        solución con formalidad {formatNumber(result.formality)} F
+        soluciÃ³n con formalidad {formatNumber(result.formality)} F
       </ResultBox>
 
       <View style={styles.helperBox}>
         <Text style={styles.body}>
-          La formalidad expresa unidades fórmula por litro de solución. Es
-          especialmente útil para describir compuestos iónicos sin asumir qué
-          especies existen finalmente después de la disolución.
+          La formalidad expresa unidades fÃ³rmula por litro de soluciÃ³n. Es
+          especialmente Ãºtil para describir compuestos iÃ³nicos sin asumir quÃ©
+          especies existen finalmente despuÃ©s de la disoluciÃ³n.
         </Text>
       </View>
 
@@ -1786,7 +1786,7 @@ function TraceResultView({
   return (
     <>
       <View style={styles.calculationBox}>
-        <Text style={styles.calculationTitle}>Cálculo</Text>
+        <Text style={styles.calculationTitle}>CÃ¡lculo</Text>
 
         <Text style={styles.equation}>{result.calculation}</Text>
 
@@ -1800,29 +1800,29 @@ function TraceResultView({
       <ResultBox>
         {getTraceMassText(result)} de {componentName ?? result.component}
         {"\n"}
-        para una concentración de {formatNumber(result.concentration)}{" "}
+        para una concentraciÃ³n de {formatNumber(result.concentration)}{" "}
         {result.unit}
       </ResultBox>
 
       {result.approximation ? (
         <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>Aproximación</Text>
+          <Text style={styles.warningTitle}>AproximaciÃ³n</Text>
 
           <Text style={styles.warningText}>{result.warning}</Text>
         </View>
       ) : (
         <View style={styles.helperBox}>
           <Text style={styles.body}>
-            Este cálculo está expresado en base masa/masa.
+            Este cÃ¡lculo estÃ¡ expresado en base masa/masa.
           </Text>
         </View>
       )}
 
       <View style={styles.helperBox}>
         <Text style={styles.body}>
-          Para masas muy pequeñas, verificá siempre la resolución del
-          instrumental. Si no pueden medirse con precisión, corresponde
-          preparar una solución madre y luego realizar una dilución.
+          Para masas muy pequeÃ±as, verificÃ¡ siempre la resoluciÃ³n del
+          instrumental. Si no pueden medirse con precisiÃ³n, corresponde
+          preparar una soluciÃ³n madre y luego realizar una diluciÃ³n.
         </Text>
       </View>
     </>
@@ -1856,7 +1856,7 @@ function ConcentrationResultView({
             Paso 1: calcular los moles
           </Text>
 
-          <Text style={styles.equation}>n = M × V</Text>
+          <Text style={styles.equation}>n = M Ã— V</Text>
 
           <Text style={styles.strong}>
             n = {formatNumber(result.molesNeeded)} mol
@@ -1866,14 +1866,14 @@ function ConcentrationResultView({
             Paso 2: convertir a gramos
           </Text>
 
-          <Text style={styles.equation}>masa = n × MM</Text>
+          <Text style={styles.equation}>masa = n Ã— MM</Text>
         </View>
 
         <ResultBox>
           {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
           {"\n"}
           para preparar {formatNumber(result.volume)} {result.volumeUnit} de
-          solución {formatNumber(result.molarity)} M
+          soluciÃ³n {formatNumber(result.molarity)} M
         </ResultBox>
       </>
     );
@@ -1893,7 +1893,7 @@ function ConcentrationResultView({
 
           <Text style={styles.calculationTitle}>Moles necesarios</Text>
 
-          <Text style={styles.equation}>n = m × kg de solvente</Text>
+          <Text style={styles.equation}>n = m Ã— kg de solvente</Text>
 
           <Text style={styles.strong}>
             n = {formatNumber(result.molesNeeded)} mol
@@ -1939,7 +1939,7 @@ function ConcentrationResultView({
           {formatNumber(result.gramsNeeded, 2)} g de {result.formula}
           {"\n"}
           para preparar {formatNumber(result.volume)} {result.volumeUnit} de
-          solución {formatNumber(result.normality)} N
+          soluciÃ³n {formatNumber(result.normality)} N
         </ResultBox>
       </>
     );
@@ -1953,7 +1953,7 @@ function ConcentrationResultView({
         <View style={styles.calculationBox}>
           <Text style={styles.calculationTitle}>Masa del componente</Text>
 
-          <Text style={styles.equation}>masa = (% × masa final) / 100</Text>
+          <Text style={styles.equation}>masa = (% Ã— masa final) / 100</Text>
 
           <Text style={styles.strong}>
             {formatNumber(result.componentAmountBase, 2)} g
@@ -1974,7 +1974,7 @@ function ConcentrationResultView({
           {formatNumber(result.componentAmountBase, 2)} g de{" "}
           {componentName ?? result.component}
           {"\n"}
-          para una preparación de {formatNumber(result.percentage)} % m/m
+          para una preparaciÃ³n de {formatNumber(result.percentage)} % m/m
         </ResultBox>
       </>
     );
@@ -1989,7 +1989,7 @@ function ConcentrationResultView({
           <Text style={styles.calculationTitle}>Masa de soluto</Text>
 
           <Text style={styles.equation}>
-            masa = (% × volumen final en mL) / 100
+            masa = (% Ã— volumen final en mL) / 100
           </Text>
 
           <Text style={styles.strong}>
@@ -2016,7 +2016,7 @@ function ConcentrationResultView({
         <Text style={styles.calculationTitle}>Volumen del componente</Text>
 
         <Text style={styles.equation}>
-          volumen = (% × volumen final) / 100
+          volumen = (% Ã— volumen final) / 100
         </Text>
 
         <Text style={styles.strong}>
@@ -2034,8 +2034,8 @@ function ConcentrationResultView({
 
       <View style={styles.helperBox}>
         <Text style={styles.body}>
-          El volumen restante no debe calcularse automáticamente como volumen
-          final menos volumen del componente, porque los volúmenes pueden no
+          El volumen restante no debe calcularse automÃ¡ticamente como volumen
+          final menos volumen del componente, porque los volÃºmenes pueden no
           ser perfectamente aditivos.
         </Text>
       </View>
@@ -2074,7 +2074,7 @@ function SubstanceInputCard({
         value={value}
         onChangeText={onChangeText}
         style={styles.input}
-        placeholder="Fórmula o nombre"
+        placeholder="FÃ³rmula o nombre"
         autoCapitalize="none"
       />
 
@@ -2087,7 +2087,7 @@ function SubstanceInputCard({
           <Text style={styles.body}>{substance.formula}</Text>
 
           <Text style={styles.body}>
-            Estado físico: {getPhysicalStateLabel(substance.physicalState)}
+            Estado fÃ­sico: {getPhysicalStateLabel(substance.physicalState)}
           </Text>
 
           <Text style={styles.body}>
@@ -2096,7 +2096,7 @@ function SubstanceInputCard({
         </View>
       ) : value.trim() !== "" ? (
         <Text style={styles.warningText}>
-          Sustancia todavía no registrada en QuimiLab.
+          Sustancia todavÃ­a no registrada en QuimiLab.
         </Text>
       ) : null}
     </View>
@@ -2111,7 +2111,7 @@ function getPreparationMethodLabel(
   }
 
   if (method === "moleFraction") {
-    return "Fracción molar";
+    return "FracciÃ³n molar";
   }
 
   if (method === "ppm") {
@@ -2164,7 +2164,7 @@ function getConcentrationPrompt(
       return "Formalidad deseada";
 
     case "moleFraction":
-      return "Fracción molar";
+      return "FracciÃ³n molar";
 
     case "massMassPercentage":
       return "Porcentaje m/m";
@@ -2176,29 +2176,29 @@ function getConcentrationPrompt(
       return "Porcentaje v/v";
 
     case "ppm":
-      return "Concentración en ppm";
+      return "ConcentraciÃ³n en ppm";
 
     case "ppb":
-      return "Concentración en ppb";
+      return "ConcentraciÃ³n en ppb";
   }
 }
 
 function getMethodExplanation(method: PreparationConcentrationMethod): string {
   switch (method) {
     case "molarity":
-      return "La molaridad utiliza el volumen final de la solución.";
+      return "La molaridad utiliza el volumen final de la soluciÃ³n.";
 
     case "normality":
-      return "La normalidad depende del número de equivalentes involucrados en la reacción.";
+      return "La normalidad depende del nÃºmero de equivalentes involucrados en la reacciÃ³n.";
 
     case "formality":
-      return "La formalidad expresa unidades fórmula de soluto por litro de solución y es especialmente útil para compuestos iónicos.";
+      return "La formalidad expresa unidades fÃ³rmula de soluto por litro de soluciÃ³n y es especialmente Ãºtil para compuestos iÃ³nicos.";
 
     case "moleFraction":
-      return "La fracción molar compara los moles de cada componente con los moles totales de la mezcla.";
+      return "La fracciÃ³n molar compara los moles de cada componente con los moles totales de la mezcla.";
 
     case "massVolumePercentage":
-      return "% m/v expresa gramos de componente por cada 100 mL de solución final.";
+      return "% m/v expresa gramos de componente por cada 100 mL de soluciÃ³n final.";
 
     case "volumeVolumePercentage":
       return "% v/v expresa mililitros de componente por cada 100 mL de mezcla final.";
@@ -2223,7 +2223,7 @@ function getTraceMassText(result: {
     return `${formatNumber(result.componentMass.milligrams, 6)} mg`;
   }
 
-  return `${formatNumber(result.componentMass.micrograms, 6)} µg`;
+  return `${formatNumber(result.componentMass.micrograms, 6)} Âµg`;
 }
 
 function getPhysicalStateLabel(
@@ -2238,16 +2238,16 @@ function getPhysicalStateLabel(
 ): string {
   switch (state) {
     case "solid":
-      return "Sólido";
+      return "SÃ³lido";
 
     case "liquid":
-      return "Líquido";
+      return "LÃ­quido";
 
     case "viscousLiquid":
-      return "Líquido viscoso";
+      return "LÃ­quido viscoso";
 
     case "semisolid":
-      return "Semisólido";
+      return "SemisÃ³lido";
 
     case "gas":
       return "Gas";
@@ -2266,10 +2266,10 @@ function getSafetyLabel(
 ): string {
   switch (classification) {
     case "requiresSupervision":
-      return "Requiere supervisión docente";
+      return "Requiere supervisiÃ³n docente";
 
     case "highPrecaution":
-      return "Precaución alta";
+      return "PrecauciÃ³n alta";
 
     case "educational":
       return "Uso educativo";
