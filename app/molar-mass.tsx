@@ -2,20 +2,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    TextInput,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-    gramsToMoles,
-    molesToGrams,
-    parsePositiveNumber,
+  gramsToMoles,
+  molesToGrams,
+  parsePositiveNumber,
 } from "@/chemistry/conversions";
 import { calculateMolarMass } from "@/chemistry/molarMass";
 import { ThemedText } from "@/components/themed-text";
@@ -29,6 +29,7 @@ export default function MolarMassScreen() {
   const [moles, setMoles] = useState("");
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+
   const colors = isDark
     ? {
         background: "#10242A",
@@ -54,6 +55,7 @@ export default function MolarMassScreen() {
         input: "#FFFFFF",
         warning: "#9A6815",
       };
+
   const result = calculatedFormula
     ? calculateMolarMass(calculatedFormula)
     : null;
@@ -79,13 +81,16 @@ export default function MolarMassScreen() {
             <View style={[styles.mark, { backgroundColor: colors.accentSoft }]}>
               <Ionicons name="calculator" size={24} color={colors.accent} />
             </View>
+
             <ThemedText style={[styles.title, { color: colors.text }]}>
               Calculadora de masa molar
             </ThemedText>
+
             <ThemedText style={[styles.intro, { color: colors.muted }]}>
               Escribí una fórmula química y QuimiLab hará el cálculo paso a
               paso.
             </ThemedText>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Preparar solución por molaridad"
@@ -107,6 +112,7 @@ export default function MolarMassScreen() {
                 Molaridad
               </ThemedText>
             </Pressable>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Preparar por molalidad"
@@ -128,6 +134,7 @@ export default function MolarMassScreen() {
                 Molalidad
               </ThemedText>
             </Pressable>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Preparar por porcentajes"
@@ -153,6 +160,7 @@ export default function MolarMassScreen() {
                 Porcentajes
               </ThemedText>
             </Pressable>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Preparar por normalidad"
@@ -174,6 +182,7 @@ export default function MolarMassScreen() {
                 Normalidad
               </ThemedText>
             </Pressable>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Calcular fracción molar"
@@ -199,6 +208,7 @@ export default function MolarMassScreen() {
                 Fracción molar
               </ThemedText>
             </Pressable>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Calcular ppm y ppb"
@@ -224,6 +234,7 @@ export default function MolarMassScreen() {
                 ppm y ppb
               </ThemedText>
             </Pressable>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Preparar por formalidad"
@@ -245,6 +256,7 @@ export default function MolarMassScreen() {
                 Formalidad
               </ThemedText>
             </Pressable>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Preparar una dilución"
@@ -270,6 +282,7 @@ export default function MolarMassScreen() {
                 Diluciones
               </ThemedText>
             </Pressable>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Preparar desde reactivo comercial"
@@ -291,6 +304,32 @@ export default function MolarMassScreen() {
                 Reactivo comercial
               </ThemedText>
             </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Conversiones de concentración"
+              onPress={() => router.push("/concentration-conversions")}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  backgroundColor: pressed
+                    ? colors.surfacePressed
+                    : colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons
+                name="swap-horizontal-outline"
+                size={18}
+                color={colors.accent}
+              />
+              <ThemedText
+                style={[styles.secondaryButtonText, { color: colors.accent }]}
+              >
+                Conversiones
+              </ThemedText>
+            </Pressable>
           </View>
 
           <View
@@ -302,6 +341,7 @@ export default function MolarMassScreen() {
             <ThemedText style={[styles.label, { color: colors.text }]}>
               Fórmula química
             </ThemedText>
+
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
@@ -320,9 +360,11 @@ export default function MolarMassScreen() {
               ]}
               value={formula}
             />
+
             <ThemedText style={[styles.hint, { color: colors.muted }]}>
               También podés escribir hidratos, por ejemplo: CaCl2·2H2O
             </ThemedText>
+
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Calcular masa molar"
@@ -398,6 +440,7 @@ export default function MolarMassScreen() {
                     >
                       No se puede calcular todavía
                     </ThemedText>
+
                     {result.warnings.map((warning) => (
                       <ThemedText
                         key={warning}
@@ -421,6 +464,7 @@ export default function MolarMassScreen() {
                     >
                       Sustancia
                     </ThemedText>
+
                     {result.substanceName ? (
                       <ThemedText
                         style={[styles.substanceName, { color: colors.text }]}
@@ -428,27 +472,32 @@ export default function MolarMassScreen() {
                         {result.substanceName}
                       </ThemedText>
                     ) : null}
+
                     <ThemedText
                       style={[styles.detailLabel, { color: colors.accent }]}
                     >
                       Fórmula
                     </ThemedText>
+
                     <ThemedText
                       style={[styles.formulaValue, { color: colors.text }]}
                     >
                       {result.formula}
                     </ThemedText>
+
                     <ThemedText
                       style={[styles.resultLabel, { color: colors.accent }]}
                     >
                       MASA MOLAR DE {result.formula}
                     </ThemedText>
+
                     <ThemedText
                       style={[styles.resultValue, { color: colors.text }]}
                     >
                       {formatNumber(result.molarMass ?? 0)} g/mol
                     </ThemedText>
                   </View>
+
                   <View
                     style={[
                       styles.detailsCard,
@@ -463,6 +512,7 @@ export default function MolarMassScreen() {
                     >
                       Composición y cálculo
                     </ThemedText>
+
                     {result.elements.map((element) => (
                       <View
                         key={element.symbol}
@@ -477,6 +527,7 @@ export default function MolarMassScreen() {
                           >
                             {element.symbol} · {element.spanishName}
                           </ThemedText>
+
                           <ThemedText
                             style={[
                               styles.elementCount,
@@ -487,6 +538,7 @@ export default function MolarMassScreen() {
                             {element.count === 1 ? "átomo" : "átomos"}
                           </ThemedText>
                         </View>
+
                         <ThemedText
                           style={[styles.calculation, { color: colors.text }]}
                         >
@@ -495,6 +547,7 @@ export default function MolarMassScreen() {
                         </ThemedText>
                       </View>
                     ))}
+
                     <ThemedText
                       style={[styles.explanation, { color: colors.muted }]}
                     >
@@ -504,6 +557,7 @@ export default function MolarMassScreen() {
                       moles.
                     </ThemedText>
                   </View>
+
                   <ConversionCard
                     title="Convertir gramos a moles"
                     label="Masa en gramos"
@@ -529,6 +583,7 @@ export default function MolarMassScreen() {
                     resultSuffix="mol"
                     colors={colors}
                   />
+
                   <ConversionCard
                     title="Convertir moles a gramos"
                     label="Cantidad de moles"
@@ -612,17 +667,21 @@ function ConversionCard({
       <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
         {title}
       </ThemedText>
+
       <ThemedText style={[styles.formula, { color: colors.accent }]}>
         {formula}
       </ThemedText>
+
       <ThemedText
         style={[styles.conversionDescription, { color: colors.muted }]}
       >
         {description}
       </ThemedText>
+
       <ThemedText style={[styles.label, { color: colors.text }]}>
         {label}
       </ThemedText>
+
       <TextInput
         keyboardType="decimal-pad"
         onChangeText={onChangeText}
@@ -638,11 +697,13 @@ function ConversionCard({
         ]}
         value={value}
       />
+
       {error ? (
         <ThemedText style={[styles.validationError, { color: colors.warning }]}>
           {error}
         </ThemedText>
       ) : null}
+
       {result ? (
         <View
           style={[
@@ -655,6 +716,7 @@ function ConversionCard({
           >
             {resultLabel}: {result.calculation} {resultSuffix}
           </ThemedText>
+
           <ThemedText style={[styles.conversionValue, { color: colors.text }]}>
             {formatNumber(result.value)} {resultSuffix}
           </ThemedText>
@@ -672,10 +734,20 @@ function formatNumber(value: number): string {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  keyboardView: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 32 },
-  header: { marginBottom: 22 },
+  safeArea: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 32,
+  },
+  header: {
+    marginBottom: 22,
+  },
   mark: {
     alignItems: "center",
     borderRadius: 14,
@@ -684,8 +756,16 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     width: 52,
   },
-  title: { fontSize: 30, fontWeight: "800", lineHeight: 37, marginBottom: 10 },
-  intro: { fontSize: 15, lineHeight: 23 },
+  title: {
+    fontSize: 30,
+    fontWeight: "800",
+    lineHeight: 37,
+    marginBottom: 10,
+  },
+  intro: {
+    fontSize: 15,
+    lineHeight: 23,
+  },
   secondaryButton: {
     alignItems: "center",
     alignSelf: "flex-start",
@@ -697,9 +777,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  secondaryButtonText: { fontSize: 14, fontWeight: "700" },
-  inputCard: { borderRadius: 12, borderWidth: 1, padding: 16 },
-  label: { fontSize: 16, fontWeight: "700", marginBottom: 9 },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  inputCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 9,
+  },
   input: {
     borderRadius: 9,
     borderWidth: 1,
@@ -707,7 +798,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  hint: { fontSize: 12, lineHeight: 18, marginTop: 8 },
+  hint: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
+  },
   button: {
     alignItems: "center",
     borderRadius: 9,
@@ -717,16 +812,28 @@ const styles = StyleSheet.create({
     marginTop: 16,
     minHeight: 48,
   },
-  buttonText: { fontSize: 14, fontWeight: "800", letterSpacing: 0.5 },
-  resultArea: { marginTop: 20 },
-  resultCard: { borderRadius: 12, padding: 18 },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  resultArea: {
+    marginTop: 20,
+  },
+  resultCard: {
+    borderRadius: 12,
+    padding: 18,
+  },
   resultLabel: {
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.7,
     marginBottom: 7,
   },
-  resultValue: { fontSize: 28, fontWeight: "800" },
+  resultValue: {
+    fontSize: 28,
+    fontWeight: "800",
+  },
   detailLabel: {
     fontSize: 12,
     fontWeight: "800",
@@ -746,8 +853,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     marginTop: 4,
   },
-  detailsCard: { borderRadius: 12, borderWidth: 1, marginTop: 12, padding: 16 },
-  sectionTitle: { fontSize: 17, fontWeight: "700", marginBottom: 12 },
+  detailsCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 12,
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
   calculationRow: {
     alignItems: "flex-start",
     borderBottomWidth: 1,
@@ -755,28 +871,62 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
   },
-  elementCopy: { flex: 1 },
-  elementName: { fontSize: 15, fontWeight: "700" },
-  elementCount: { fontSize: 13, marginTop: 3 },
+  elementCopy: {
+    flex: 1,
+  },
+  elementName: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  elementCount: {
+    fontSize: 13,
+    marginTop: 3,
+  },
   calculation: {
     flexShrink: 1,
     fontSize: 13,
     lineHeight: 19,
     textAlign: "right",
   },
-  explanation: { fontSize: 14, lineHeight: 21, marginTop: 16 },
+  explanation: {
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 16,
+  },
   conversionCard: {
     borderRadius: 12,
     borderWidth: 1,
     marginTop: 12,
     padding: 16,
   },
-  formula: { fontSize: 17, fontWeight: "700", marginBottom: 3 },
-  conversionDescription: { fontSize: 12, lineHeight: 18, marginBottom: 14 },
-  validationError: { fontSize: 13, marginTop: 7 },
-  conversionResult: { borderRadius: 9, marginTop: 12, padding: 12 },
-  conversionCalculation: { fontSize: 13, lineHeight: 19 },
-  conversionValue: { fontSize: 21, fontWeight: "800", marginTop: 5 },
+  formula: {
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+  conversionDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  validationError: {
+    fontSize: 13,
+    marginTop: 7,
+  },
+  conversionResult: {
+    borderRadius: 9,
+    marginTop: 12,
+    padding: 12,
+  },
+  conversionCalculation: {
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  conversionValue: {
+    fontSize: 21,
+    fontWeight: "800",
+    marginTop: 5,
+  },
   message: {
     alignItems: "flex-start",
     borderRadius: 12,
@@ -785,6 +935,12 @@ const styles = StyleSheet.create({
     gap: 11,
     padding: 16,
   },
-  messageCopy: { flex: 1 },
-  messageText: { flex: 1, fontSize: 14, lineHeight: 21 },
+  messageCopy: {
+    flex: 1,
+  },
+  messageText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 21,
+  },
 });
