@@ -10,6 +10,8 @@ import {
     View,
 } from "react-native";
 
+import MoleFractionPreparationCard from "../components/MoleFractionPreparationCard";
+
 import {
     createLabPreparationPlan,
     type PreparationPlan,
@@ -46,6 +48,7 @@ type PreparationObjective = "combineComponents" | "dilution";
 type PreparationConcentrationMethod =
   | ConcentrationMethod
   | "formality"
+  | "moleFraction"
   | "ppm"
   | "ppb";
 
@@ -264,6 +267,7 @@ export default function PreparacionLaboratorioScreen() {
         "molality",
         "normality",
         "formality",
+        "moleFraction",
         "massMassPercentage",
         "massVolumePercentage",
         "ppm",
@@ -272,7 +276,7 @@ export default function PreparacionLaboratorioScreen() {
     }
 
     if (isLiquidLiquid && pairInteraction?.interaction === "miscible") {
-      return ["volumeVolumePercentage"];
+      return ["volumeVolumePercentage", "moleFraction"];
     }
 
     return [];
@@ -305,12 +309,15 @@ export default function PreparacionLaboratorioScreen() {
   const isTraceMethod =
     concentrationMethod === "ppm" || concentrationMethod === "ppb";
 
+  const isMoleFractionMethod = concentrationMethod === "moleFraction";
+
   const concentrationCalculation =
     useMemo<ConcentrationPreparationResponse | null>(() => {
       if (
         availableMethods.length === 0 ||
         !concentrationInput.trim() ||
         isTraceMethod ||
+        isMoleFractionMethod ||
         concentrationMethod === "formality"
       ) {
         return null;
@@ -443,6 +450,7 @@ export default function PreparacionLaboratorioScreen() {
       concentrationMethod,
       concentrationInput,
       isTraceMethod,
+      isMoleFractionMethod,
       aqueousSolidSolute,
       percentageComponent,
       cantidadFinal,
@@ -1194,97 +1202,197 @@ export default function PreparacionLaboratorioScreen() {
               ))}
             </View>
 
-            <Text style={styles.label}>
-              {getConcentrationPrompt(concentrationMethod)}
-            </Text>
-
-            <View style={styles.valueRow}>
-              <TextInput
-                value={concentrationInput}
-                onChangeText={setConcentrationInput}
-                keyboardType="decimal-pad"
-                style={[styles.input, styles.flexInput]}
-                placeholder={
-                  concentrationMethod === "ppm" ||
-                  concentrationMethod === "ppb" ||
-                  concentrationMethod === "massMassPercentage" ||
-                  concentrationMethod === "massVolumePercentage" ||
-                  concentrationMethod === "volumeVolumePercentage"
-                    ? "10"
-                    : "0,5"
-                }
+            {isMoleFractionMethod ? (
+              <MoleFractionPreparationCard
+                component1={component1}
+                component2={component2}
               />
-
-              <Text style={styles.suffix}>
-                {getPreparationMethodUnit(concentrationMethod)}
-              </Text>
-            </View>
-
-            {isTraceMethod ? (
+            ) : (
               <>
-                <Text style={styles.label}>Base de concentración</Text>
+                <Text style={styles.label}>
+                  {getConcentrationPrompt(concentrationMethod)}
+                </Text>
 
-                <View style={styles.unitRow}>
-                  <Pressable
-                    style={[
-                      styles.traceModeButton,
-                      traceMode === "dilute-aqueous" && styles.unitButtonActive,
-                    ]}
-                    onPress={() => setTraceMode("dilute-aqueous")}
-                  >
-                    <Text
-                      style={[
-                        styles.unitText,
-                        traceMode === "dilute-aqueous" && styles.unitTextActive,
-                      ]}
-                    >
-                      Solución acuosa diluida
-                    </Text>
-                  </Pressable>
+                <View style={styles.valueRow}>
+                  <TextInput
+                    value={concentrationInput}
+                    onChangeText={setConcentrationInput}
+                    keyboardType="decimal-pad"
+                    style={[styles.input, styles.flexInput]}
+                    placeholder={
+                      concentrationMethod === "ppm" ||
+                      concentrationMethod === "ppb" ||
+                      concentrationMethod === "massMassPercentage" ||
+                      concentrationMethod === "massVolumePercentage" ||
+                      concentrationMethod === "volumeVolumePercentage"
+                        ? "10"
+                        : "0,5"
+                    }
+                  />
 
-                  <Pressable
-                    style={[
-                      styles.traceModeButton,
-                      traceMode === "mass-mass" && styles.unitButtonActive,
-                    ]}
-                    onPress={() => setTraceMode("mass-mass")}
-                  >
-                    <Text
-                      style={[
-                        styles.unitText,
-                        traceMode === "mass-mass" && styles.unitTextActive,
-                      ]}
-                    >
-                      Masa / masa
-                    </Text>
-                  </Pressable>
+                  <Text style={styles.suffix}>
+                    {getPreparationMethodUnit(concentrationMethod)}
+                  </Text>
                 </View>
 
-                {traceMode === "dilute-aqueous" ? (
+                {isTraceMethod ? (
                   <>
-                    <Text style={styles.label}>Volumen final de solución</Text>
+                    <Text style={styles.label}>Base de concentración</Text>
+
+                    <View style={styles.unitRow}>
+                      <Pressable
+                        style={[
+                          styles.traceModeButton,
+                          traceMode === "dilute-aqueous" &&
+                            styles.unitButtonActive,
+                        ]}
+                        onPress={() => setTraceMode("dilute-aqueous")}
+                      >
+                        <Text
+                          style={[
+                            styles.unitText,
+                            traceMode === "dilute-aqueous" &&
+                              styles.unitTextActive,
+                          ]}
+                        >
+                          Solución acuosa diluida
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        style={[
+                          styles.traceModeButton,
+                          traceMode === "mass-mass" && styles.unitButtonActive,
+                        ]}
+                        onPress={() => setTraceMode("mass-mass")}
+                      >
+                        <Text
+                          style={[
+                            styles.unitText,
+                            traceMode === "mass-mass" && styles.unitTextActive,
+                          ]}
+                        >
+                          Masa / masa
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {traceMode === "dilute-aqueous" ? (
+                      <>
+                        <Text style={styles.label}>
+                          Volumen final de solución
+                        </Text>
+
+                        <TextInput
+                          value={cantidadFinal}
+                          onChangeText={setCantidadFinal}
+                          keyboardType="decimal-pad"
+                          style={styles.input}
+                        />
+
+                        <View style={styles.unitRow}>
+                          {(["mL", "L"] as const).map((unit) => (
+                            <Pressable
+                              key={unit}
+                              style={[
+                                styles.unitButton,
+                                unidadFinal === unit && styles.unitButtonActive,
+                              ]}
+                              onPress={() => setUnidadFinal(unit)}
+                            >
+                              <Text
+                                style={[
+                                  styles.unitText,
+                                  unidadFinal === unit && styles.unitTextActive,
+                                ]}
+                              >
+                                {unit}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+
+                        <Text style={styles.helper}>
+                          Para soluciones acuosas diluidas, QuimiLab utiliza la
+                          aproximación basada en una densidad cercana a 1 kg/L.
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.label}>
+                          Masa final de la mezcla
+                        </Text>
+
+                        <TextInput
+                          value={finalMassInput}
+                          onChangeText={setFinalMassInput}
+                          keyboardType="decimal-pad"
+                          style={styles.input}
+                        />
+
+                        <View style={styles.unitRow}>
+                          {(["g", "kg"] as const).map((unit) => (
+                            <Pressable
+                              key={unit}
+                              style={[
+                                styles.unitButton,
+                                finalMassUnit === unit &&
+                                  styles.unitButtonActive,
+                              ]}
+                              onPress={() => setFinalMassUnit(unit)}
+                            >
+                              <Text
+                                style={[
+                                  styles.unitText,
+                                  finalMassUnit === unit &&
+                                    styles.unitTextActive,
+                                ]}
+                              >
+                                {unit}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+
+                        <Text style={styles.helper}>
+                          Esta opción calcula ppm o ppb directamente respecto de
+                          la masa total de la mezcla.
+                        </Text>
+                      </>
+                    )}
+
+                    {traceCalculation ? (
+                      <TraceResultView
+                        calculation={traceCalculation}
+                        componentName={aqueousSolidSolute?.name}
+                      />
+                    ) : null}
+                  </>
+                ) : concentrationMethod === "molality" ? (
+                  <>
+                    <Text style={styles.label}>Masa de solvente</Text>
 
                     <TextInput
-                      value={cantidadFinal}
-                      onChangeText={setCantidadFinal}
+                      value={solventMassInput}
+                      onChangeText={setSolventMassInput}
                       keyboardType="decimal-pad"
                       style={styles.input}
                     />
 
                     <View style={styles.unitRow}>
-                      {(["mL", "L"] as const).map((unit) => (
+                      {(["g", "kg"] as const).map((unit) => (
                         <Pressable
                           key={unit}
                           style={[
                             styles.unitButton,
-                            unidadFinal === unit && styles.unitButtonActive,
+                            solventMassUnit === unit && styles.unitButtonActive,
                           ]}
-                          onPress={() => setUnidadFinal(unit)}
+                          onPress={() => setSolventMassUnit(unit)}
                         >
                           <Text
                             style={[
                               styles.unitText,
-                              unidadFinal === unit && styles.unitTextActive,
+                              solventMassUnit === unit && styles.unitTextActive,
                             ]}
                           >
                             {unit}
@@ -1294,11 +1402,10 @@ export default function PreparacionLaboratorioScreen() {
                     </View>
 
                     <Text style={styles.helper}>
-                      Para soluciones acuosas diluidas, QuimiLab utiliza la
-                      aproximación basada en una densidad cercana a 1 kg/L.
+                      La molalidad utiliza masa de solvente, no volumen final.
                     </Text>
                   </>
-                ) : (
+                ) : concentrationMethod === "massMassPercentage" ? (
                   <>
                     <Text style={styles.label}>Masa final de la mezcla</Text>
 
@@ -1332,144 +1439,62 @@ export default function PreparacionLaboratorioScreen() {
                     </View>
 
                     <Text style={styles.helper}>
-                      Esta opción calcula ppm o ppb directamente respecto de la
-                      masa total de la mezcla.
+                      % m/m utiliza la masa total final de la mezcla.
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.label}>Volumen final</Text>
+
+                    <TextInput
+                      value={cantidadFinal}
+                      onChangeText={setCantidadFinal}
+                      keyboardType="decimal-pad"
+                      style={styles.input}
+                    />
+
+                    <View style={styles.unitRow}>
+                      {(["mL", "L"] as const).map((unit) => (
+                        <Pressable
+                          key={unit}
+                          style={[
+                            styles.unitButton,
+                            unidadFinal === unit && styles.unitButtonActive,
+                          ]}
+                          onPress={() => setUnidadFinal(unit)}
+                        >
+                          <Text
+                            style={[
+                              styles.unitText,
+                              unidadFinal === unit && styles.unitTextActive,
+                            ]}
+                          >
+                            {unit}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    <Text style={styles.helper}>
+                      {getMethodExplanation(concentrationMethod)}
                     </Text>
                   </>
                 )}
 
-                {traceCalculation ? (
-                  <TraceResultView
-                    calculation={traceCalculation}
-                    componentName={aqueousSolidSolute?.name}
+                {concentrationMethod === "formality" && formalityCalculation ? (
+                  <FormalityResultView calculation={formalityCalculation} />
+                ) : null}
+
+                {!isTraceMethod &&
+                concentrationMethod !== "formality" &&
+                concentrationCalculation ? (
+                  <ConcentrationResultView
+                    calculation={concentrationCalculation}
+                    componentName={percentageComponent?.name}
                   />
                 ) : null}
               </>
-            ) : concentrationMethod === "molality" ? (
-              <>
-                <Text style={styles.label}>Masa de solvente</Text>
-
-                <TextInput
-                  value={solventMassInput}
-                  onChangeText={setSolventMassInput}
-                  keyboardType="decimal-pad"
-                  style={styles.input}
-                />
-
-                <View style={styles.unitRow}>
-                  {(["g", "kg"] as const).map((unit) => (
-                    <Pressable
-                      key={unit}
-                      style={[
-                        styles.unitButton,
-                        solventMassUnit === unit && styles.unitButtonActive,
-                      ]}
-                      onPress={() => setSolventMassUnit(unit)}
-                    >
-                      <Text
-                        style={[
-                          styles.unitText,
-                          solventMassUnit === unit && styles.unitTextActive,
-                        ]}
-                      >
-                        {unit}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                <Text style={styles.helper}>
-                  La molalidad utiliza masa de solvente, no volumen final.
-                </Text>
-              </>
-            ) : concentrationMethod === "massMassPercentage" ? (
-              <>
-                <Text style={styles.label}>Masa final de la mezcla</Text>
-
-                <TextInput
-                  value={finalMassInput}
-                  onChangeText={setFinalMassInput}
-                  keyboardType="decimal-pad"
-                  style={styles.input}
-                />
-
-                <View style={styles.unitRow}>
-                  {(["g", "kg"] as const).map((unit) => (
-                    <Pressable
-                      key={unit}
-                      style={[
-                        styles.unitButton,
-                        finalMassUnit === unit && styles.unitButtonActive,
-                      ]}
-                      onPress={() => setFinalMassUnit(unit)}
-                    >
-                      <Text
-                        style={[
-                          styles.unitText,
-                          finalMassUnit === unit && styles.unitTextActive,
-                        ]}
-                      >
-                        {unit}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                <Text style={styles.helper}>
-                  % m/m utiliza la masa total final de la mezcla.
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.label}>Volumen final</Text>
-
-                <TextInput
-                  value={cantidadFinal}
-                  onChangeText={setCantidadFinal}
-                  keyboardType="decimal-pad"
-                  style={styles.input}
-                />
-
-                <View style={styles.unitRow}>
-                  {(["mL", "L"] as const).map((unit) => (
-                    <Pressable
-                      key={unit}
-                      style={[
-                        styles.unitButton,
-                        unidadFinal === unit && styles.unitButtonActive,
-                      ]}
-                      onPress={() => setUnidadFinal(unit)}
-                    >
-                      <Text
-                        style={[
-                          styles.unitText,
-                          unidadFinal === unit && styles.unitTextActive,
-                        ]}
-                      >
-                        {unit}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                <Text style={styles.helper}>
-                  {getMethodExplanation(concentrationMethod)}
-                </Text>
-              </>
             )}
-
-            {concentrationMethod === "formality" && formalityCalculation ? (
-              <FormalityResultView calculation={formalityCalculation} />
-            ) : null}
-
-            {!isTraceMethod &&
-            concentrationMethod !== "formality" &&
-            concentrationCalculation ? (
-              <ConcentrationResultView
-                calculation={concentrationCalculation}
-                componentName={percentageComponent?.name}
-              />
-            ) : null}
           </View>
         ) : (
           <View style={styles.inputCard}>
@@ -1992,6 +2017,10 @@ function getPreparationMethodLabel(
     return "Formalidad";
   }
 
+  if (method === "moleFraction") {
+    return "Fracción molar";
+  }
+
   if (method === "ppm") {
     return "ppm";
   }
@@ -2008,6 +2037,10 @@ function getPreparationMethodUnit(
 ): string {
   if (method === "formality") {
     return "F";
+  }
+
+  if (method === "moleFraction") {
+    return "";
   }
 
   if (method === "ppm") {
@@ -2037,6 +2070,9 @@ function getConcentrationPrompt(
     case "formality":
       return "Formalidad deseada";
 
+    case "moleFraction":
+      return "Fracción molar";
+
     case "massMassPercentage":
       return "Porcentaje m/m";
 
@@ -2064,6 +2100,9 @@ function getMethodExplanation(method: PreparationConcentrationMethod): string {
 
     case "formality":
       return "La formalidad expresa unidades fórmula de soluto por litro de solución y es especialmente útil para compuestos iónicos.";
+
+    case "moleFraction":
+      return "La fracción molar compara los moles de cada componente con los moles totales de la mezcla.";
 
     case "massVolumePercentage":
       return "% m/v expresa gramos de componente por cada 100 mL de solución final.";
