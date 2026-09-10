@@ -52,7 +52,7 @@ export default function HomeScreen() {
       title: "TABLA PERIÓDICA",
       description: "Elementos, símbolos, números atómicos y masas atómicas.",
       icon: "grid-outline" as const,
-      route: "/modal" as const,
+      route: "/tabla-periodica" as const,
     },
     {
       title: "SUSTANCIAS Y MATERIALES",
