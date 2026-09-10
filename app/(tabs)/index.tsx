@@ -54,12 +54,19 @@ export default function HomeScreen() {
       icon: "grid-outline" as const,
       route: "/tabla-periodica" as const,
     },
-    {
+{
       title: "SUSTANCIAS Y MATERIALES",
       description:
         "Fórmulas, propiedades, comportamiento y elementos de laboratorio.",
       icon: "water-outline" as const,
       route: "/sustancias-materiales" as const,
+    },
+    {
+      title: "INFORME FINAL DE LABORATORIO",
+      description:
+        "Completá el informe de la experiencia, guardalo y generá un PDF para compartir con el profesor.",
+      icon: "document-text-outline" as const,
+      route: "/informe-final" as const,
     },
   ];
 
