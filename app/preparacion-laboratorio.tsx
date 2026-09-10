@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import {
@@ -44,6 +44,7 @@ import {
 } from "../chemistry/substances";
 
 import { labEquipment } from "../data/labEquipment";
+import { saveLabReportSnapshot } from "../data/labReportStorage";
 
 type PreparationObjective =
   | "combineComponents"
@@ -1077,6 +1078,93 @@ export default function PreparacionLaboratorioScreen() {
         )
     : [];
 
+
+  const usePreparationInReport = async () => {
+    if (!plan) {
+      return;
+    }
+
+    const substances = [component1, component2].flatMap((item) =>
+      item ? [`${item.name} (${item.formula})`] : [],
+    );
+
+    const objectiveText =
+      objective === "combineComponents"
+        ? "Combinar los componentes"
+        : objective === "dilution"
+          ? "Diluir una soluci\u00f3n madre"
+          : "Preparar desde un reactivo comercial";
+
+    let calculationText = `${getPreparationMethodLabel(concentrationMethod)}: ${concentrationInput} ${getPreparationMethodUnit(concentrationMethod)}.`;
+    let theoreticalResult = plan.description;
+
+    if (concentrationCalculation && !("error" in concentrationCalculation)) {
+      switch (concentrationCalculation.method) {
+        case "molarity": {
+          const r = concentrationCalculation.result;
+          calculationText = `Molaridad: ${formatNumber(r.molarity)} M. n = M \u00d7 V = ${formatNumber(r.molesNeeded)} mol; masa = n \u00d7 MM = ${formatNumber(r.gramsNeeded, 2)} g.`;
+          theoreticalResult = `${formatNumber(r.gramsNeeded, 2)} g de ${r.formula} para preparar ${formatNumber(r.volume)} ${r.volumeUnit} de soluci\u00f3n ${formatNumber(r.molarity)} M.`;
+          break;
+        }
+
+        case "molality": {
+          const r = concentrationCalculation.result;
+          calculationText = `Molalidad: ${formatNumber(r.molality)} mol/kg. Moles necesarios: ${formatNumber(r.molesNeeded)} mol; masa de soluto: ${formatNumber(r.gramsNeeded, 2)} g.`;
+          theoreticalResult = `${formatNumber(r.gramsNeeded, 2)} g de ${r.formula} con ${formatNumber(r.solventMass)} ${r.solventMassUnit} de solvente.`;
+          break;
+        }
+
+        case "normality": {
+          const r = concentrationCalculation.result;
+          calculationText = `Normalidad: ${formatNumber(r.normality)} N. Factor de equivalencia: ${r.equivalenceFactor}; peso equivalente: ${formatNumber(r.equivalentWeight, 3)} g/eq; masa necesaria: ${formatNumber(r.gramsNeeded, 2)} g.`;
+          theoreticalResult = `${formatNumber(r.gramsNeeded, 2)} g de ${r.formula} para preparar ${formatNumber(r.volume)} ${r.volumeUnit} de soluci\u00f3n ${formatNumber(r.normality)} N.`;
+          break;
+        }
+
+        case "massMassPercentage": {
+          const r = concentrationCalculation.result;
+          calculationText = `Porcentaje m/m: ${formatNumber(r.percentage)} %. Masa del componente: ${formatNumber(r.componentAmountBase, 2)} g.`;
+          theoreticalResult = `${formatNumber(r.componentAmountBase, 2)} g de ${percentageComponent?.name ?? r.component} para una preparaci\u00f3n de ${formatNumber(r.percentage)} % m/m.`;
+          break;
+        }
+
+        case "massVolumePercentage": {
+          const r = concentrationCalculation.result;
+          calculationText = `Porcentaje m/v: ${formatNumber(r.percentage)} %. Masa de soluto: ${formatNumber(r.componentAmountBase, 2)} g.`;
+          theoreticalResult = `${formatNumber(r.componentAmountBase, 2)} g de ${percentageComponent?.name ?? r.component} para preparar ${formatNumber(r.finalAmount)} ${r.finalUnit} al ${formatNumber(r.percentage)} % m/v.`;
+          break;
+        }
+
+        case "volumeVolumePercentage": {
+          const r = concentrationCalculation.result;
+          calculationText = `Porcentaje v/v: ${formatNumber(r.percentage)} %. Volumen del componente: ${formatNumber(r.componentAmountBase, 2)} mL.`;
+          theoreticalResult = `${formatNumber(r.componentAmountBase, 2)} mL de ${percentageComponent?.name ?? r.component} para preparar ${formatNumber(r.finalAmount)} ${r.finalUnit} al ${formatNumber(r.percentage)} % v/v.`;
+          break;
+        }
+      }
+    } else if (formalityCalculation && !("error" in formalityCalculation)) {
+      const r = formalityCalculation.result;
+      calculationText = `Formalidad: ${formatNumber(r.formality)} F. Unidades f\u00f3rmula: ${formatNumber(r.formulaMoles)} mol; masa necesaria: ${formatNumber(r.gramsNeeded, 2)} g.`;
+      theoreticalResult = `${formatNumber(r.gramsNeeded, 2)} g de ${r.formula} para preparar ${formatNumber(r.volume)} ${r.volumeUnit} de soluci\u00f3n con formalidad ${formatNumber(r.formality)} F.`;
+    } else if (traceCalculation && !("error" in traceCalculation)) {
+      const r = traceCalculation.result;
+      calculationText = r.calculation;
+      theoreticalResult = `${getTraceMassText(r)} de ${aqueousSolidSolute?.name ?? r.component} para una concentraci\u00f3n de ${formatNumber(r.concentration)} ${r.unit}.`;
+    }
+    await saveLabReportSnapshot({
+      title: plan.title,
+      objective: objectiveText,
+      substances,
+      calculation: calculationText,
+      theoreticalResult,
+      materials: materiales.map((material) => material.nombre),
+      procedure: plan.steps,
+      safety: plan.warnings,
+      foundation: `${automaticPreparation.explanation} ${plan.description}`.trim(),
+    });
+
+    router.push("/informe-final");
+  };
   return (
     <>
       <Stack.Screen
@@ -1628,6 +1716,16 @@ export default function PreparacionLaboratorioScreen() {
 
                 <Text style={styles.planText}>{plan.description}</Text>
               </View>
+
+
+              <Pressable
+                style={styles.optionCard}
+                onPress={usePreparationInReport}
+              >
+                <Text style={styles.optionTitle}>
+                  USAR ESTA PREPARACIÓN EN EL INFORME FINAL
+                </Text>
+              </Pressable>
 
               {materiales.length > 0 && (
                 <View style={styles.card}>
