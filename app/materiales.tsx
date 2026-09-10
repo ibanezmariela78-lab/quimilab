@@ -110,7 +110,7 @@ export default function MaterialesScreen() {
             ))}
 
             <Text style={styles.label}>PRECISIÓN</Text>
-            <Text style={styles.text}>{seleccionado.precision}</Text>
+            <Text style={styles.text}>{seleccionado.precision === "No aplica" ? "No corresponde: no es un instrumento de medición" : seleccionado.precision}</Text>
 
             {seleccionado.estadosFisicos.length > 0 && (
               <>
@@ -163,7 +163,7 @@ export default function MaterialesScreen() {
               <Text style={styles.cardTitle}>{material.nombre}</Text>
 
               <View style={styles.precisionBadge}>
-                <Text style={styles.precisionText}>{material.precision}</Text>
+                <Text style={styles.precisionText}>{material.precision === "No aplica" ? "No corresponde" : material.precision}</Text>
               </View>
             </View>
 

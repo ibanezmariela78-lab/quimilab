@@ -527,4 +527,79 @@ export const labEquipment: LabEquipment[] = [
     porqueUsarlo:
       "Porque permite controlar la dirección del líquido durante el lavado.",
   },
+
+  {
+    id: "bunsen-burner",
+    nombre: "Mechero Bunsen",
+    categoria: "Calentamiento",
+    descripcion:
+      "Quemador de gas utilizado para producir una llama regulable en experiencias de laboratorio.",
+    usos: [
+      "Calentar sustancias en recipientes adecuados",
+      "Realizar calentamientos controlados bajo supervisión",
+    ],
+    noRecomendadoPara: [
+      "Uso autónomo por estudiantes",
+      "Trabajar cerca de sustancias inflamables",
+      "Calentar recipientes cerrados",
+    ],
+    precision: "No aplica",
+    estadosFisicos: ["Líquido", "Sólido"],
+    ejemplo:
+      "Calentar de forma controlada una muestra en un recipiente resistente al calor.",
+    porqueUsarlo:
+      "Porque permite aportar calor mediante una llama regulable cuando el procedimiento de laboratorio lo requiere.",
+    seguridad:
+      "Requiere supervisión docente, control de la fuente de gas y alejamiento de materiales inflamables.",
+    requiereSupervision: true,
+  },
+
+  {
+    id: "hot-plate",
+    nombre: "Parrilla eléctrica",
+    categoria: "Calentamiento",
+    descripcion:
+      "Equipo eléctrico con una superficie calefactora utilizado para calentar recipientes sin llama abierta.",
+    usos: [
+      "Calentar líquidos en recipientes adecuados",
+      "Mantener un calentamiento controlado",
+    ],
+    noRecomendadoPara: [
+      "Uso sin supervisión",
+      "Calentar recipientes cerrados",
+      "Utilizar con recipientes no aptos para calentamiento",
+    ],
+    precision: "No aplica",
+    estadosFisicos: ["Líquido", "Sólido"],
+    ejemplo:
+      "Calentar una solución en un vaso de precipitados resistente al calor.",
+    porqueUsarlo:
+      "Porque permite calentar sin llama abierta y facilita un calentamiento controlado.",
+    seguridad:
+      "La superficie puede permanecer caliente después de apagarse; requiere supervisión y material resistente al calor.",
+    requiereSupervision: true,
+  },
+
+  {
+    id: "ph-indicator-strips",
+    nombre: "Tiras indicadoras de pH",
+    categoria: "Medición",
+    descripcion:
+      "Tiras con indicadores químicos que cambian de color y permiten estimar aproximadamente el pH de una solución.",
+    usos: [
+      "Estimar el pH de soluciones acuosas",
+      "Comparar de forma aproximada la acidez o basicidad",
+    ],
+    noRecomendadoPara: [
+      "Mediciones de pH de alta precisión",
+      "Sustituir un pH-metro cuando se necesita un valor preciso",
+    ],
+    precision: "Baja",
+    estadosFisicos: ["Líquido"],
+    ejemplo:
+      "Estimar si una solución acuosa es ácida, neutra o básica mediante la escala de color.",
+    porqueUsarlo:
+      "Porque permite una estimación rápida y sencilla del pH sin utilizar instrumentación electrónica.",
+  },
+
 ];
