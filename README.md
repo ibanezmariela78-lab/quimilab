@@ -1,50 +1,203 @@
-# Welcome to your Expo app 👋
+# QuimiLab EDU
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+QuimiLab EDU es una aplicación educativa de química orientada a estudiantes de nivel secundario y docentes. Integra cálculo químico, preparación de laboratorio, consulta de sustancias y materiales, tabla periódica e informes finales en PDF dentro de una misma herramienta.
 
-## Get started
+## Objetivo
 
-1. Install dependencies
+El proyecto busca acompañar el aprendizaje de química con una herramienta clara, guiada y científicamente consistente. La aplicación no se limita a resolver cálculos: también ayuda a interpretar qué se está preparando, qué materiales conviene utilizar, qué precauciones deben considerarse y cómo documentar la experiencia de laboratorio.
 
-   ```bash
-   npm install
-   ```
+## Funcionalidades principales
 
-2. Start the app
+### Preparación de laboratorio
 
-   ```bash
-   npx expo start
-   ```
+Permite trabajar con distintos tipos de preparación y concentración:
 
-In the output, you'll find options to open the app in a
+- Molaridad
+- Molalidad
+- Normalidad
+- Formalidad
+- Porcentaje masa/masa
+- Porcentaje masa/volumen
+- Porcentaje volumen/volumen
+- Fracción molar
+- ppm y ppb
+- Diluciones
+- Preparaciones a partir de reactivos comerciales
+- Sistemas sólido + líquido
+- Sistemas sólido + sólido
+- Sustancias viscosas o semisólidas
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+La aplicación calcula cantidades, identifica materiales necesarios, muestra resultados teóricos y genera orientaciones compatibles con criterios de laboratorio escolar.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### Calculadora química
 
-## Get a fresh project
+Incluye herramientas para:
 
-When you're ready, run:
+- Masa molar
+- Molaridad
+- Molalidad
+- Normalidad
+- Formalidad
+- Porcentajes
+- Fracción molar
+- Concentraciones traza
+- Diluciones
+- Reactivos comerciales
+- Conversión de concentraciones
 
-```bash
-npm run reset-project
+### Tabla periódica
+
+Incluye los 118 elementos y permite buscar por:
+
+- Nombre
+- Símbolo
+- Número atómico
+
+Cada elemento cuenta con una ficha individual con información básica para consulta educativa.
+
+### Sustancias y materiales
+
+La aplicación incorpora una biblioteca de sustancias y una biblioteca de materiales de laboratorio.
+
+En sustancias se puede consultar información como:
+
+- Fórmula
+- Propiedades
+- Solubilidad
+- Comportamiento frente a la temperatura
+- Observaciones de seguridad
+
+En materiales se informa:
+
+- Para qué sirve cada instrumento
+- Cuándo se utiliza
+- Cuándo no conviene utilizarlo
+- Nivel de precisión
+- Estados físicos asociados
+- Ejemplos de uso
+- Recomendaciones de seguridad
+
+### Informe final de laboratorio
+
+QuimiLab EDU permite generar un informe final combinando:
+
+- Datos ingresados por el estudiante
+- Objetivo
+- Fundamentación
+- Resultado experimental
+- Observaciones
+- Conclusión
+- Sustancias utilizadas
+- Cálculos
+- Resultado teórico
+- Materiales
+- Procedimiento
+- Seguridad
+
+El informe puede guardarse como borrador y luego generarse y compartirse en formato PDF.
+
+## Criterios científicos incorporados
+
+El proyecto fue diseñado respetando criterios importantes de química experimental, entre ellos:
+
+- El volumen final de una solución no se interpreta automáticamente como volumen de agua agregada.
+- En porcentaje m/m se trabaja con la masa total de la mezcla.
+- En porcentaje v/v no se asume aditividad ideal de volúmenes.
+- La normalidad depende de la reacción y del factor de equivalencia.
+- Los reactivos comerciales concentrados requieren considerar concentración y densidad.
+- Las sustancias viscosas o semisólidas pueden requerir estrategias basadas en masa o densidad.
+- Un sólido en agua no se clasifica automáticamente como solución.
+- Sistemas inmiscibles no se presentan automáticamente como emulsiones.
+- Cuando la información química no es suficiente, la aplicación evita inventar propiedades o comportamientos.
+
+## Seguridad
+
+QuimiLab EDU tiene un enfoque educativo.
+
+Las sustancias o procedimientos que pueden implicar riesgo se presentan de manera teórica y con advertencias. La aplicación no reemplaza la supervisión docente, las normas institucionales ni los protocolos de seguridad de laboratorio.
+
+## Tecnologías utilizadas
+
+- React Native
+- Expo
+- TypeScript
+- Expo Router
+- AsyncStorage
+- expo-print
+- expo-sharing
+- expo-file-system
+
+## Estructura general
+
+```text
+app/
+components/
+chemistry/
+data/
+hooks/
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+La aplicación utiliza rutas independientes para cada módulo y componentes reutilizables para los cálculos y las preparaciones.
 
-## Learn more
+## Instalación
 
-To learn more about developing your project with Expo, look at the following resources:
+Requisitos:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- Node.js
+- npm
+- Expo
 
-## Join the community
+Clonar el repositorio:
 
-Join our community of developers creating universal apps.
+```bash
+git clone https://github.com/ibanezmariela78-lab/quimilab.git
+cd quimilab
+npm install
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Iniciar el proyecto:
+
+```bash
+npx expo start
+```
+
+Si la red local presenta problemas de conexión:
+
+```bash
+npx expo start --tunnel
+```
+
+## Validación del proyecto
+
+El proyecto se valida con:
+
+```bash
+npx tsc --noEmit
+npx eslint app chemistry components data hooks
+npx expo-doctor
+git diff --check
+```
+
+Estado de la última revisión técnica:
+
+- TypeScript sin errores
+- ESLint sin errores
+- Expo Doctor: 21/21 checks passed
+- Árbol de trabajo Git limpio
+
+## Estado del proyecto
+
+QuimiLab EDU se encuentra en una etapa funcional avanzada, con los módulos principales integrados y revisados.
+
+El proyecto continúa abierto a mejoras de experiencia de usuario, ampliación de sustancias, nuevos contenidos educativos y distribución como aplicación instalable.
+
+## Repositorio
+
+GitHub: https://github.com/ibanezmariela78-lab/quimilab
+
+---
+
+Autora: Mariela Ibañez  
+Teléfono: +54 11 4058-2174  
+GitHub: https://github.com/ibanezmariela78-lab  
+LinkedIn: https://ar.linkedin.com/in/mariela-ibanez-quimioinformatica
