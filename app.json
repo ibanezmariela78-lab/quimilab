@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "quimilab",
+    "name": "QuimiLab EDU",
     "slug": "quimilab",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,8 @@
     "scheme": "quimilab",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.marielaibanez.quimilabedu"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.marielaibanez.quimilabedu"
     },
     "web": {
       "output": "static",
@@ -46,6 +48,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d671e64f-e419-4151-a33e-fa01f9320e7d"
+      }
     }
   }
 }
