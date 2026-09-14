@@ -1,59 +1,59 @@
 {
-  "expo": {
-    "name": "QuimiLab EDU",
-    "slug": "quimilab",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "quimilab",
-    "userInterfaceStyle": "automatic",
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.marielaibanez.quimilabedu"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false,
-      "package": "com.marielaibanez.quimilabedu"
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
-      "expo-font",
-      "expo-image",
-      "expo-status-bar",
-      "expo-web-browser",
-      "expo-sharing"
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "d671e64f-e419-4151-a33e-fa01f9320e7d"
-      }
-    }
-  }
+    "expo":  {
+                 "name":  "QuimiLab EDU",
+                 "slug":  "quimilab",
+                 "version":  "1.0.0",
+                 "orientation":  "portrait",
+                 "icon":  "./assets/images/icon.png",
+                 "scheme":  "quimilab",
+                 "userInterfaceStyle":  "automatic",
+                 "ios":  {
+                             "supportsTablet":  true,
+                             "bundleIdentifier":  "com.marielaibanez.quimilabedu"
+                         },
+                 "android":  {
+                                 "adaptiveIcon":  {
+                                                      "backgroundColor":  "#F4F8F7",
+                                                      "foregroundImage":  "./assets/images/android-icon-foreground.png"
+                                                  },
+                                 "predictiveBackGestureEnabled":  false,
+                                 "package":  "com.marielaibanez.quimilabedu"
+                             },
+                 "web":  {
+                             "output":  "static",
+                             "favicon":  "./assets/images/favicon.png"
+                         },
+                 "plugins":  [
+                                 "expo-router",
+                                 [
+                                     "expo-splash-screen",
+                                     {
+                                         "image":  "./assets/images/splash-icon.png",
+                                         "imageWidth":  300,
+                                         "resizeMode":  "contain",
+                                         "backgroundColor":  "#F4F8F7",
+                                         "dark":  {
+                                                      "backgroundColor":  "#F4F8F7"
+                                                  }
+                                     }
+                                 ],
+                                 "expo-font",
+                                 "expo-image",
+                                 "expo-status-bar",
+                                 "expo-web-browser",
+                                 "expo-sharing"
+                             ],
+                 "experiments":  {
+                                     "typedRoutes":  true,
+                                     "reactCompiler":  true
+                                 },
+                 "extra":  {
+                               "router":  {
+
+                                          },
+                               "eas":  {
+                                           "projectId":  "d671e64f-e419-4151-a33e-fa01f9320e7d"
+                                       }
+                           }
+             }
 }
