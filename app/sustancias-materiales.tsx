@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router, Stack } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
@@ -28,7 +29,7 @@ export default function SustanciasMaterialesScreen() {
           onPress={() => router.push("/substances")}
         >
           <View style={styles.iconBox}>
-            <Text style={styles.icon}>⚗️</Text>
+            <Ionicons name="flask-outline" size={28} color="#0d887d" />
           </View>
 
           <View style={styles.cardContent}>
@@ -48,7 +49,7 @@ export default function SustanciasMaterialesScreen() {
           onPress={() => router.push("/materiales")}
         >
           <View style={styles.iconBox}>
-            <Text style={styles.icon}>🧪</Text>
+            <Ionicons name="construct-outline" size={28} color="#0d887d" />
           </View>
 
           <View style={styles.cardContent}>
@@ -112,8 +113,7 @@ const styles = StyleSheet.create({
     borderColor: "#d5e4e2",
     padding: 20,
     marginBottom: 18,
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: "column",
   },
 
   iconBox: {
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#daf1ed",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 16,
+    marginBottom: 14,
   },
 
   icon: {

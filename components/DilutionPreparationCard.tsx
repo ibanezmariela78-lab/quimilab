@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import {
@@ -9,11 +9,24 @@ import {
 
 import type { SubstanceRecord } from "../chemistry/substances";
 
+export type DilutionReportData = {
+  concentrationType: DilutionConcentrationType;
+  initialConcentration: number;
+  finalConcentration: number;
+  finalVolume: number;
+  stockVolume: number;
+  volumeUnit: DilutionVolumeUnit;
+  safetyWarning?: string;
+};
 type Props = {
   substance: SubstanceRecord | null;
+  onCalculationChange?: (data: DilutionReportData | null) => void;
 };
 
-export default function DilutionPreparationCard({ substance }: Props) {
+export default function DilutionPreparationCard({
+  substance,
+  onCalculationChange,
+}: Props) {
   const [type, setType] = useState<DilutionConcentrationType>("molarity");
 
   const [initialConcentration, setInitialConcentration] = useState("1");
@@ -46,6 +59,22 @@ export default function DilutionPreparationCard({ substance }: Props) {
     volumeUnit,
   ]);
 
+  useEffect(() => {
+    if (!calculation || "error" in calculation) {
+      onCalculationChange?.(null);
+      return;
+    }
+
+    onCalculationChange?.({
+      concentrationType: type,
+      initialConcentration: calculation.initialConcentration,
+      finalConcentration: calculation.finalConcentration,
+      finalVolume: calculation.finalVolume,
+      stockVolume: calculation.stockVolume,
+      volumeUnit: calculation.volumeUnit,
+      safetyWarning: calculation.safetyWarning ?? undefined,
+    });
+  }, [calculation, onCalculationChange, type]);
   if (!substance) {
     return (
       <View style={styles.warningCard}>

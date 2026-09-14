@@ -1,5 +1,6 @@
+import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
@@ -13,10 +14,22 @@ export default function PeriodicTableScreen() {
     const q = normalize(query);
     if (!q) return elements;
 
+    const exactSymbol = elements.filter(
+      (element) => normalize(element.symbol) === q,
+    );
+
+    if (exactSymbol.length > 0) {
+      return exactSymbol;
+    }
+
+    if (/^\d+$/u.test(q)) {
+      return elements.filter(
+        (element) => String(element.atomicNumber) === q,
+      );
+    }
+
     return elements.filter((element) =>
-      normalize(
-        `${element.atomicNumber} ${element.symbol} ${element.name} ${element.spanishName}`,
-      ).includes(q),
+      normalize(`${element.name} ${element.spanishName}`).includes(q),
     );
   }, [query]);
 
@@ -26,11 +39,12 @@ export default function PeriodicTableScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <Stack.Screen options={{ title: "Tabla peri\u00f3dica" }} />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <ThemedText style={styles.title}>Tabla periódica</ThemedText>
+        <Text style={styles.title}>Tabla periódica</Text>
         <ThemedText style={styles.intro}>
           Consultá los 118 elementos por nombre, símbolo o número atómico.
         </ThemedText>

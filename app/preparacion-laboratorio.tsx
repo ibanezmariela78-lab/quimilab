@@ -10,8 +10,12 @@ import {
     View,
 } from "react-native";
 
-import CommercialReagentPreparationCard from "../components/CommercialReagentPreparationCard";
-import DilutionPreparationCard from "../components/DilutionPreparationCard";
+import CommercialReagentPreparationCard, {
+  type CommercialReportData,
+} from "../components/CommercialReagentPreparationCard";
+import DilutionPreparationCard, {
+  type DilutionReportData,
+} from "../components/DilutionPreparationCard";
 import MoleFractionPreparationCard from "../components/MoleFractionPreparationCard";
 
 import {
@@ -88,6 +92,10 @@ export default function PreparacionLaboratorioScreen() {
   const [traceMode, setTraceMode] =
     useState<TracePreparationMode>("dilute-aqueous");
 
+  const [dilutionReport, setDilutionReport] =
+    useState<DilutionReportData | null>(null);
+  const [commercialReport, setCommercialReport] =
+    useState<CommercialReportData | null>(null);
   const cantidadNumerica = Number(cantidadFinal.replace(",", "."));
 
   const component1 = useMemo(() => {
@@ -1079,6 +1087,65 @@ export default function PreparacionLaboratorioScreen() {
     : [];
 
 
+
+  const useCommercialPreparationInReport = async () => {
+    if (!commercialReport || !commercialSubstance) {
+      return;
+    }
+
+    const concentrationUnit =
+      commercialReport.concentrationType === "molarity" ? "M" : "N";
+
+    const commercialValue =
+      commercialReport.concentrationType === "molarity"
+        ? commercialReport.commercialMolarity
+        : commercialReport.commercialConcentration;
+
+    const substances = [component1, component2].flatMap((item) =>
+      item ? [`${item.name} (${item.formula})`] : [],
+    );
+
+    const calculationText =
+      `Reactivo comercial: ${formatNumber(commercialReport.percentage)} % m/m; ` +
+      `densidad: ${formatNumber(commercialReport.density)} g/mL. ` +
+      `Concentraci\u00f3n comercial aproximada: ${formatNumber(commercialValue, 4)} ${concentrationUnit}. ` +
+      `C\u2081V\u2081 = C\u2082V\u2082. ` +
+      `V\u2081 = (${formatNumber(commercialReport.finalConcentration)} ${concentrationUnit} \u00d7 ` +
+      `${formatNumber(commercialReport.finalVolume)} ${commercialReport.volumeUnit}) / ` +
+      `${formatNumber(commercialValue, 4)} ${concentrationUnit} = ` +
+      `${formatNumber(commercialReport.stockVolume, 4)} ${commercialReport.volumeUnit}.`;
+
+    const theoreticalResult =
+      `${formatNumber(commercialReport.stockVolume, 4)} ${commercialReport.volumeUnit} ` +
+      `de soluci\u00f3n comercial de ${commercialSubstance.name} para preparar ` +
+      `${formatNumber(commercialReport.finalVolume)} ${commercialReport.volumeUnit} ` +
+      `a ${formatNumber(commercialReport.finalConcentration)} ${concentrationUnit}.`;
+
+    const safety = [
+      ...(commercialReport.safetyWarning
+        ? [commercialReport.safetyWarning]
+        : []),
+      "QuimiLab muestra el c\u00e1lculo te\u00f3rico, pero no genera un procedimiento aut\u00f3nomo de manipulaci\u00f3n para este reactivo.",
+    ];
+
+    await saveLabReportSnapshot({
+      title: "Preparaci\u00f3n desde reactivo comercial",
+      objective: "Preparar desde un reactivo comercial",
+      substances,
+      calculation: calculationText,
+      theoreticalResult,
+      materials: [],
+      procedure: [],
+      safety,
+      foundation:
+        `La preparaci\u00f3n parte de una soluci\u00f3n comercial de ${commercialSubstance.name}. ` +
+        `QuimiLab utiliza el porcentaje en masa y la densidad indicados en la etiqueta para estimar ` +
+        `la concentraci\u00f3n comercial y calcular te\u00f3ricamente el volumen necesario para obtener ` +
+        `una soluci\u00f3n m\u00e1s diluida.`,
+    });
+
+    router.push("/informe-final");
+  };
   const usePreparationInReport = async () => {
     if (!plan) {
       return;
@@ -1098,7 +1165,24 @@ export default function PreparacionLaboratorioScreen() {
     let calculationText = `${getPreparationMethodLabel(concentrationMethod)}: ${concentrationInput} ${getPreparationMethodUnit(concentrationMethod)}.`;
     let theoreticalResult = plan.description;
 
-    if (concentrationCalculation && !("error" in concentrationCalculation)) {
+    if (objective === "dilution" && dilutionReport) {
+      const concentrationUnit =
+        dilutionReport.concentrationType === "molarity" ? "M" : "N";
+
+      calculationText =
+        `C\u2081V\u2081 = C\u2082V\u2082. ` +
+        `V\u2081 = (C\u2082 \u00d7 V\u2082) / C\u2081 = ` +
+        `(${formatNumber(dilutionReport.finalConcentration)} ${concentrationUnit} \u00d7 ` +
+        `${formatNumber(dilutionReport.finalVolume)} ${dilutionReport.volumeUnit}) / ` +
+        `${formatNumber(dilutionReport.initialConcentration)} ${concentrationUnit} = ` +
+        `${formatNumber(dilutionReport.stockVolume)} ${dilutionReport.volumeUnit}.`;
+
+      theoreticalResult =
+        `Medir ${formatNumber(dilutionReport.stockVolume)} ${dilutionReport.volumeUnit} ` +
+        `de soluci\u00f3n madre de ${dilutionSubstance?.name ?? "la sustancia"} y completar ` +
+        `con solvente hasta un volumen final de ${formatNumber(dilutionReport.finalVolume)} ` +
+        `${dilutionReport.volumeUnit}.`;
+    } else if (concentrationCalculation && !("error" in concentrationCalculation)) {
       switch (concentrationCalculation.method) {
         case "molarity": {
           const r = concentrationCalculation.result;
@@ -1169,7 +1253,7 @@ export default function PreparacionLaboratorioScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Preparación de laboratorio",
+          title: "Preparación",
         }}
       />
 
@@ -1339,13 +1423,30 @@ export default function PreparacionLaboratorioScreen() {
           <View style={styles.concentrationCard}>
             <Text style={styles.smallLabel}>REACTIVO COMERCIAL</Text>
 
-            <CommercialReagentPreparationCard substance={commercialSubstance} />
+            <CommercialReagentPreparationCard
+              substance={commercialSubstance}
+              onCalculationChange={setCommercialReport}
+            />
+
+            {commercialReport ? (
+              <Pressable
+                style={styles.optionCard}
+                onPress={useCommercialPreparationInReport}
+              >
+                <Text style={styles.optionTitle}>
+                  USAR ESTA PREPARACIÓN EN EL INFORME FINAL
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : objective === "dilution" ? (
           <View style={styles.concentrationCard}>
             <Text style={styles.smallLabel}>DILUCIÓN</Text>
 
-            <DilutionPreparationCard substance={dilutionSubstance} />
+            <DilutionPreparationCard
+              substance={dilutionSubstance}
+              onCalculationChange={setDilutionReport}
+            />
           </View>
         ) : availableMethods.length > 0 ? (
           <View style={styles.concentrationCard}>

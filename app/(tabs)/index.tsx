@@ -35,34 +35,34 @@ export default function HomeScreen() {
 
   const actions = [
     {
-      title: "PREPARACIÓN DE LABORATORIO",
+      title: "Preparación de laboratorio",
       description:
         "Soluciones, mezclas, sólidos, líquidos y preparaciones guiadas paso a paso.",
       icon: "flask-outline" as const,
       route: "/preparacion-laboratorio" as const,
     },
     {
-      title: "CALCULADORA QUÍMICA",
+      title: "Calculadora química",
       description:
         "Molaridad, molalidad, normalidad, porcentajes, fracción molar, ppm, ppb y más.",
       icon: "calculator-outline" as const,
       route: "/calculadora-quimica" as const,
     },
     {
-      title: "TABLA PERIÓDICA",
+      title: "Tabla periódica",
       description: "Elementos, símbolos, números atómicos y masas atómicas.",
       icon: "grid-outline" as const,
       route: "/tabla-periodica" as const,
     },
 {
-      title: "SUSTANCIAS Y MATERIALES",
+      title: "Sustancias y materiales",
       description:
         "Fórmulas, propiedades, comportamiento y elementos de laboratorio.",
       icon: "water-outline" as const,
       route: "/sustancias-materiales" as const,
     },
     {
-      title: "INFORME FINAL DE LABORATORIO",
+      title: "Informe final",
       description:
         "Completá el informe de la experiencia, guardalo y generá un PDF para compartir con el profesor.",
       icon: "document-text-outline" as const,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     minHeight: 188,
-    padding: 16,
+    padding: 12,
     width: "48%",
   },
   iconBox: {
@@ -223,9 +223,9 @@ const styles = StyleSheet.create({
     width: 42,
   },
   actionTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "700",
-    lineHeight: 21,
+    lineHeight: 18,
     marginBottom: 7,
   },
   actionDescription: {

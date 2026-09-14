@@ -21,6 +21,8 @@ export async function saveLabReportSnapshot(
     LAB_REPORT_SNAPSHOT_KEY,
     JSON.stringify(snapshot),
   );
+
+  await AsyncStorage.removeItem("quimilab:informe-final");
 }
 
 export async function loadLabReportSnapshot(): Promise<LabReportSnapshot | null> {

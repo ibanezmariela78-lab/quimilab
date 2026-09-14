@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import {
@@ -9,11 +9,27 @@ import {
 
 import type { SubstanceRecord } from "../chemistry/substances";
 
+export type CommercialReportData = {
+  concentrationType: CommercialConcentrationType;
+  percentage: number;
+  density: number;
+  commercialMolarity: number;
+  commercialConcentration: number;
+  finalConcentration: number;
+  finalVolume: number;
+  stockVolume: number;
+  volumeUnit: CommercialVolumeUnit;
+  safetyWarning?: string;
+};
 type Props = {
   substance: SubstanceRecord | null;
+  onCalculationChange?: (data: CommercialReportData | null) => void;
 };
 
-export default function CommercialReagentPreparationCard({ substance }: Props) {
+export default function CommercialReagentPreparationCard({
+  substance,
+  onCalculationChange,
+}: Props) {
   const [percentage, setPercentage] = useState("37");
 
   const [density, setDensity] = useState("1,19");
@@ -49,6 +65,26 @@ export default function CommercialReagentPreparationCard({ substance }: Props) {
     finalVolume,
     volumeUnit,
   ]);
+
+  useEffect(() => {
+    if (!calculation || "error" in calculation) {
+      onCalculationChange?.(null);
+      return;
+    }
+
+    onCalculationChange?.({
+      concentrationType: type,
+      percentage: calculation.percentage,
+      density: calculation.density,
+      commercialMolarity: calculation.commercialMolarity,
+      commercialConcentration: calculation.commercialConcentration,
+      finalConcentration: calculation.finalConcentration,
+      finalVolume: calculation.finalVolume,
+      stockVolume: calculation.stockVolume,
+      volumeUnit: calculation.volumeUnit,
+      safetyWarning: calculation.safetyWarning ?? undefined,
+    });
+  }, [calculation, onCalculationChange, type]);
 
   if (!substance) {
     return (

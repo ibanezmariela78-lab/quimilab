@@ -1,3 +1,4 @@
+import { Stack } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Print from "expo-print";
 import * as FileSystem from "expo-file-system/legacy";
@@ -51,10 +52,21 @@ export default function InformeFinalScreen() {
   useEffect(() => {
     void (async () => {
       try {
-        const savedSnapshot = await loadLabReportSnapshot();
+        const [savedSnapshot, savedDraft] = await Promise.all([
+          loadLabReportSnapshot(),
+          AsyncStorage.getItem("quimilab:informe-final"),
+        ]);
+
         setSnapshot(savedSnapshot);
 
-        if (savedSnapshot) {
+        if (savedDraft) {
+          const parsedDraft = JSON.parse(savedDraft) as Partial<Report>;
+
+          setReport({
+            ...initial,
+            ...parsedDraft,
+          });
+        } else if (savedSnapshot) {
           setReport((current) => ({
             ...current,
             titulo: savedSnapshot.title,
@@ -97,10 +109,15 @@ export default function InformeFinalScreen() {
           ? '<h3>Sustancias</h3><p>' + e(snapshot.substances.join(", ")) + '</p>' +
             '<h3>Cálculo</h3><p>' + e(snapshot.calculation) + '</p>' +
             '<h3>Resultado Teórico</h3><p>' + e(snapshot.theoreticalResult) + '</p>' +
-            '<h3>Materiales</h3><p>' + e(snapshot.materials.join(", ")) + '</p>' +
-            '<h3>Procedimiento</h3><ol>' +
-            snapshot.procedure.map((step) => '<li>' + e(step) + '</li>').join("") +
-            '</ol><h3>Seguridad</h3><ul>' +
+            (snapshot.materials.length > 0
+              ? '<h3>Materiales</h3><p>' + e(snapshot.materials.join(", ")) + '</p>'
+              : '') +
+            (snapshot.procedure.length > 0
+              ? '<h3>Procedimiento</h3><ol>' +
+                snapshot.procedure.map((step) => '<li>' + e(step) + '</li>').join("") +
+                '</ol>'
+              : '<h3>Procedimiento</h3><p>No se muestra un procedimiento aut\u00f3nomo por razones de seguridad.</p>') +
+            '<h3>Seguridad</h3><ul>' +
             snapshot.safety.map((warning) => '<li>' + e(warning) + '</li>').join("") +
             '</ul>'
           : '<p>No se vinculó una preparación de laboratorio.</p>'
@@ -130,6 +147,7 @@ export default function InformeFinalScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <Stack.Screen options={{ title: "Informe final" }} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ThemedText style={styles.title}>Informe Final de Laboratorio</ThemedText>
         <ThemedText style={styles.intro}>
@@ -138,8 +156,8 @@ export default function InformeFinalScreen() {
 
         <Section title="Datos del trabajo">
           <Field label="Curso" value={report.curso} onChangeText={(v) => set("curso", v)} />
-          <Field label="Integrantes del Grupo" value={report.integrantes} onChangeText={(v) => set("integrantes", v)} placeholder="Ingresá el nombre de todos los integrantes" />
-          <Field label="Título de la experiencia" value={report.titulo} onChangeText={(v) => set("titulo", v)} />
+          <Field label="Integrantes del Grupo" value={report.integrantes} onChangeText={(v) => set("integrantes", v)} placeholder="Nombres de los integrantes" />
+          <Field label="Título de la experiencia" value={report.titulo} onChangeText={(v) => set("titulo", v)} multiline />
         </Section>
 
         <Section title="Desarrollo">

@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
+import { useEffect } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -8,6 +9,11 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function CalculadoraQuimicaScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    navigation.setOptions({ title: "Calculadora química" });
+  }, [navigation]);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 

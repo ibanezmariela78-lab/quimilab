@@ -40,7 +40,7 @@ export default function MaterialesScreen() {
     <>
       <Stack.Screen
         options={{
-          title: "Materiales de laboratorio",
+          title: "Materiales",
         }}
       />
 
@@ -62,7 +62,7 @@ export default function MaterialesScreen() {
           style={styles.input}
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholder="Buscar material, categoría o uso"
+          placeholder="Buscar material o categoría"
           placeholderTextColor="#6f8584"
         />
 
@@ -252,14 +252,12 @@ const styles = StyleSheet.create({
   },
 
   cardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "column",
     alignItems: "flex-start",
-    gap: 12,
+    gap: 8,
   },
 
   cardTitle: {
-    flex: 1,
     fontSize: 22,
     fontWeight: "800",
     color: "#173b40",
